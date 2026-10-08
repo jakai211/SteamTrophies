@@ -14,12 +14,9 @@ function requestProcessor($request) {
     switch ($request['type']) {
         case "login":
         case "register":
-        case "validate_token":
+        case "validate_session":
         case "logout":
-            $client = new rabbitMQClient(
-                "DatabaseRabbitMQ.ini",
-                "testServer"
-            );
+            $client = new rabbitMQClient "databaseRabbitMQ.ini", "databaseServer");
 
             echo "Waiting for database reply..." . PHP_EOL;
             $response = $client->send_request($request);

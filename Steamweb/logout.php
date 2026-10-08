@@ -15,11 +15,11 @@ if (isset($_COOKIE['session_token']))
 
     $request = array();
     $request['type'] = "logout";
-    $request['token'] = $_COOKIE['session_token'];
+    $request['session_token'] = $_COOKIE['session_token'];
 
     $response = $client->send_request($request);
 
-    if ($response !== "yes")
+    if (!isset($response['success']) || $response['success'] !== true)
     {
         exit("Logout failed. Please try again.");
     }

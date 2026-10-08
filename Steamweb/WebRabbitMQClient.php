@@ -69,7 +69,7 @@ else
     }
     else
     {
-        echo "Registration failed.";
+        echo "Username Already Taken";
     }
 }
 ?>

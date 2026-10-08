@@ -17,14 +17,14 @@ if (empty($_COOKIE['session_token']))
 $client = new rabbitMQClient("WebRabbitMQ.ini", "testServer");
 
 $request = array();
-$request['type'] = "validate_token";
-$request['token'] = $_COOKIE['session_token'];
+$request['type'] = "validate_session";
+$request['session_token'] = $_COOKIE['session_token'];
 
 $response = $client->send_request($request);
 
 //Checks username and returns it if key is valid
-if (isset($response['valid'], $response['username']) &&
-    $response['valid'] === true &&
+if (isset($response['success'], $response['username']) &&
+    $response['success'] === true &&
     is_string($response['username']))
 {
     echo json_encode(array(
