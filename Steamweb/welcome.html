@@ -1,29 +1,46 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
 
     <title>Welcome</title>
 
 </head>
-
 <body>
 
+    <h1 id="welcome"></h1>
 
+    <form id="logout" action="logout.php" method="POST" hidden>
+    
+	    <button type="submit">Logout</button>
+   
+    </form>
 
-<h1>Welcome!</h1>
+    <script>
+        async function checkLogin()
+        {
+            try
+            {
+                const response = await fetch("validateToken.php");
+                const result = await response.json();
 
+                if (response.ok && result.valid === true)
+                {
+                    document.getElementById("welcome").textContent =
+                        "Welcome, " + result.username + "!";
 
+                    document.getElementById("logout").hidden = false;
+                }
+                else
+                {
+                    window.location.replace("login.html");
+                }
+            }
+            catch (error)
+            {
+                window.location.replace("login.html");
+            }
+        }
+        checkLogin();
 
-<p>You have successfully logged in.</p>
-
-
-
-<a href="login.html">Logout</a>
-
-
-
+    </script>
 </body>
-
-</html>

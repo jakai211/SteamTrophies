@@ -1,71 +1,41 @@
 <!DOCTYPE html>
 
 <html>
-
 <head>
 
     <title>Register</title>
 
 </head>
-
 <body>
 
+	<h1>Create an Account</h1>
 
+	<form action="WebRabbitMQClient.php" method="POST">
 
-<h1>Create Account</h1>
+	<input type="hidden" name="type" value="register">
 
+    	<label for="username">Username:</label>
+    	<input type="text" id="username" name="username" required>
 
+    	<br><br>
 
-<form method="POST" action="register.php">
+   	<label for="password">Password:</label>
+   	<input type="password" id="password" name="password" required>
 
+  	<br><br>
 
+    	<label for="confirm_password">Confirm Password:</label>
+   	<input type="password" id="confirm_password" name="confirm_password" required>
 
-    <label>Username:</label>
+    	<br><br>
 
-    <input type="text" name="username" required>
-
-
-
-    <br><br>
-
-
-
-    <label>Password:</label>
-
-    <input type="password" name="password" required>
-
-
-
-    <br><br>
-
-
-
-    <label>Confirm Password:</label>
-
-    <input type="password" name="confirm_password" required>
-
-
-
-    <br><br>
-
-
-
-    <button type="submit">Register</button>
-
-
+   	<button type="submit">Register</button>
 
 </form>
-
-
-
 <br>
 
-
-
-<a href="login.html">Login Page Login</a>
-
+<a href="login.html">Registered? Login</a>
 
 
 </body>
-
 </html>
