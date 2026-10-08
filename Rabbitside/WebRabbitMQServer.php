@@ -16,11 +16,13 @@ function requestProcessor($request) {
         case "register":
         case "validate_session":
         case "logout":
-            $client = new rabbitMQClient "databaseRabbitMQ.ini", "databaseServer");
+            $client = new rabbitMQClient ("databaseRabbitMQ.ini", "databaseServer");
 
             echo "Waiting for database reply..." . PHP_EOL;
             $response = $client->send_request($request);
-            echo "Database replied." . PHP_EOL;
+
+	    echo "Success: " . json_encode($response['success'] ?? null) . PHP_EOL;
+	    echo "Message: " . ($response['message'] ?? "No message") . PHP_EOL;
 
             return $response;
     }
