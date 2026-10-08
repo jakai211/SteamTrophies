@@ -49,10 +49,59 @@ function makeSession($username)
     return $token;//return the token so the rest of it can be used
 }
 
+// need to create a register function because we have one :/
+function doRegister($username,$password) // it will need username and password for now 
+{
+    $mydb = connectDB(); //connect again
+
+    // basic check to make sure that the username they create isn't already taken
+    $stmt = $mydb->prepare("SELECT id FROM users WHERE username = ?"); 
+    $stmt->bind_param("s", $username); //binding the username
+    $stmt->execute(); //running it
+    if ($stmt->get_result()->num_rows > 0) // checks whether the name matches with another user within the database
+    {
+        return false; //return false if its geater that 1 (matches with a name from the db)
+    }
+
+    // was created from what I saw online for hashed passwords
+    $hash = password_hash($password, PASSWORD_DEFAULT); 
+    $stmt = $mydb->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
+    $stmt->bind_param("ss", $username, $hash);
+    $stmt->execute();
+
+    return true; //returns true
+}
+
+function doValidate($sessionId) // creating the missing validate function from the file
+{
+    $mydb = connectDB(); //connect
+
+    $stmt = $mydb->prepare("SELECT user_id FROM sessions WHERE token = ? AND expires_at > NOW()"); //validate the tokens expiration and token itself
+    $stmt->bind_param("s", $sessionId);//bind
+    $stmt->execute();
+
+    if ($stmt->get_result()->num_rows == 1) //checks 
+    {
+        return true;
+    }
+    return false;
+}
+
+function doLogout($sessionId)
+{
+    $mydb = connectDB(); //connect
+
+    $stmt = $mydb->prepare("DELETE FROM sessions WHERE token = ?"); //removes then from database
+    $stmt->bind_param("s", $sessionId); //bind
+    $stmt->execute(); //execute
+
+    return true;
+}
+
 function requestProcessor($request)
 {
   echo "received request".PHP_EOL;
-  var_dump($request);
+  //var_dump($request);
   if(!isset($request['type']))
   {
     return "ERROR: unsupported message type";
@@ -60,9 +109,30 @@ function requestProcessor($request)
   switch ($request['type'])
   {
     case "login":
-      return doLogin($request['username'],$request['password']);
+      if (doLogin($request['username'],$request['password']))
+      {
+        $token = makeSession($request['username']);
+        return array("success" => true, "message" => "login ok", "token" => $token);
+      }
+      return array("success" => false, "message" => "wrong username or password");
+    case "register": //added a case to register
+      if (doRegister($request['username'],$request['password']))
+        {
+            return array("success" => true, "message" => "account created"); //if true show that the account is create
+        }
+      return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
     case "validate_session":
-      return doValidate($request['sessionId']);
+      if (doValidate($request['sessionId']))
+      {
+        return array("success" => true, "message" => "session valid");
+      }
+      return array("success" => false, "message" => "session invalid");
+    case "logout":
+      if (doLogout($request['sessionId']))
+      {
+        return array("success" => true, "message" => "logged out");
+      }
+      return array("success" => false, "message" => "logout failed");
   }
   return array("returnCode" => '0', 'message'=>"Server received request and processed");
 }
