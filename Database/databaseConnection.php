@@ -1,4 +1,4 @@
-<?php
+<?php //this file incorporates what was used from mysqlconnect.php but I used db_config to obtain the password needed. 
 function connectDB()
 {
     require('db_config.php');
