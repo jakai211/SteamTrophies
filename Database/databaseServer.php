@@ -106,34 +106,43 @@ function requestProcessor($request)
   {
     return "ERROR: unsupported message type";
   }
-  switch ($request['type'])
-  {
-    case "login":
-      if (doLogin($request['username'],$request['password']))
-      {
-        $token = makeSession($request['username']);
-        return array("success" => true, "message" => "login ok", "token" => $token);
-      }
-      return array("success" => false, "message" => "wrong username or password");
-    case "register": //added a case to register
-      if (doRegister($request['username'],$request['password']))
+   echo "type: ".$request['type'].PHP_EOL; //prints and logs in the listener's terminal
+  try                                            
+  {    
+    switch ($request['type'])
+    {
+        case "login":
+        if (doLogin($request['username'],$request['password']))
         {
-            return array("success" => true, "message" => "account created"); //if true show that the account is create
+            $token = makeSession($request['username']);
+            return array("success" => true, "message" => "login ok", "token" => $token);
         }
-      return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
-    case "validate_session":
-      if (doValidate($request['sessionId']))
-      {
-        return array("success" => true, "message" => "session valid");
-      }
-      return array("success" => false, "message" => "session invalid");
-    case "logout":
-      if (doLogout($request['sessionId']))
-      {
-        return array("success" => true, "message" => "logged out");
-      }
-      return array("success" => false, "message" => "logout failed");
-  }
+        return array("success" => false, "message" => "wrong username or password");
+        case "register": //added a case to register
+        if (doRegister($request['username'],$request['password']))
+            {
+                return array("success" => true, "message" => "account created"); //if true show that the account is create
+            }
+        return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
+        case "validate_session":
+        if (doValidate($request['sessionId']))
+        {
+            return array("success" => true, "message" => "session valid");
+        }
+        return array("success" => false, "message" => "session invalid");
+        case "logout":
+        if (doLogout($request['sessionId']))
+        {
+            return array("success" => true, "message" => "logged out");
+        }
+        return array("success" => false, "message" => "logout failed");
+    }
+  }    
+  catch (Throwable $e)                          //helps catch and explain errors for mysql
+  {                                              
+    echo "ERROR: ".$e->getMessage().PHP_EOL;     
+    return array("success" => false, "message" => "server error");  
+  }                                              
   return array("returnCode" => '0', 'message'=>"Server received request and processed");
 }
 
