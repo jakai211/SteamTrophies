@@ -31,6 +31,9 @@ function makeSession($username)
 {
     $mydb = connectDB(); //connect
 
+    // $stmt = $mydb->prepare("DELETE FROM sessions WHERE expires_at <= NOW()"); //added a delete token for expired ones
+    // $stmt->execute(); //execute command before starting
+
     // get the user's id
     $stmt = $mydb->prepare("SELECT id FROM users WHERE username = ?"); //similar to before
     $stmt->bind_param("s", $username); //similar to before
