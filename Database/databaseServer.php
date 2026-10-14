@@ -89,11 +89,11 @@ function doValidate($sessionId) // creating the missing validate function from t
 
     $now = time();
     $stmt = $mydb->prepare(  //changed to match Jakai's validateToken
-        "SELECT users.username
-         FROM sessions
-         JOIN users ON users.id = sessions.user_id
-         WHERE sessions.token = ? AND sessions.expires_at > ?"
-    );
+      "SELECT users.username 
+       FROM sessions
+       JOIN users ON users.id = sessions.user_id
+       WHERE sessions.token = ? AND sessions.expires_at > ?"
+    ); // getting the user from the db
     $stmt->bind_param("si", $sessionId, $now);
     $stmt->execute();
 
