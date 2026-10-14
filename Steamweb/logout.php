@@ -15,7 +15,7 @@ if (isset($_COOKIE['session_token']))
 
     $request = array();
     $request['type'] = "logout";
-    $request['session_token'] = $_COOKIE['session_token'];
+    $request['sessionId'] = $_COOKIE['session_token'];
 
     $response = $client->send_request($request);
 
