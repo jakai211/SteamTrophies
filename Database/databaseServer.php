@@ -88,13 +88,19 @@ function doValidate($sessionId) // creating the missing validate function from t
     $mydb = connectDB(); //connect
 
     $now = time();
-    $stmt = $mydb->prepare("SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?"); //validate the tokens expiration and token itself
+    $stmt = $mydb->prepare(  //changed to match Jakai's validateToken
+        "SELECT users.username
+         FROM sessions
+         JOIN users ON users.id = sessions.user_id
+         WHERE sessions.token = ? AND sessions.expires_at > ?"
+    );
     $stmt->bind_param("si", $sessionId, $now);
     $stmt->execute();
 
-    if ($stmt->get_result()->num_rows == 1) //checks 
+    $row = $stmt->get_result()->fetch_assoc();
+    if ($row)
     {
-        return true;
+        return $row['username']; //the username that owns this token
     }
     return false;
 }
@@ -134,9 +140,10 @@ function handleRequest($request)
         }
       return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
     case "validate_session":
-      if (doValidate($request['sessionId']))
+      $username = doValidate($request['sessionId']); //changed to match Jakai's validateToken file
+      if ($username !== false)
       {
-        return array("success" => true, "message" => "session valid");
+        return array("success" => true, "message" => "session valid", "username" => $username); //returning the username that he needed
       }
       return array("success" => false, "message" => "session invalid");
     case "logout":
