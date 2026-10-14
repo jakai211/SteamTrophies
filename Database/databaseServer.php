@@ -43,7 +43,12 @@ function makeSession($username)
     $stmt->execute(); //similar to before
     $user = $stmt->get_result()->fetch_assoc();
 
-    // make a token that lasts one hour and save it (researched online for how to do this)
+    // remove this user's previous sessions so only one token is valid at a time
+    $stmt = $mydb->prepare("DELETE FROM sessions WHERE user_id = ?");
+    $stmt->bind_param("i", $user['id']);
+    $stmt->execute();
+
+    // make a token that lasts one hour and save it(researched online for how to do this)
     $token = bin2hex(random_bytes(32));
     $expires = time() + 3600;
 
