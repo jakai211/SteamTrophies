@@ -1,33 +1,81 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+            text-align: center;
+            padding: 4rem 1rem;
+        }
+
+        form {
+            max-width: 18rem;
+            margin: 2rem auto 0;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.6rem;
+            margin-bottom: 1rem;
+            border: 1px solid #888;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #222;
+            border-radius: 6px;
+            background: #222;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #222;
+        }
+
+        a {
+            color: #222;
+        }
+
+        .switch {
+            margin-top: 1.5rem;
+        }
+    </style>
 </head>
 <body>
 
-	<h1>Login In</h1>
+    <h1>Log in</h1>
 
-	<form action="WebRabbitMQClient.php" method="POST">
-	<input type="hidden" name="type" value="login">
+    <form action="WebRabbitMQClient.php" method="POST">
+        <input type="hidden" name="type" value="login">
 
-    		<label for="username" >Username: </label>
-    		<input type="text" id="username" name="username" required>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
 
-    		<br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
 
-    		<label for="password">Password:</label>
-    		<input type="password" id="password"  name="password" required>
+        <button type="submit">Log in</button>
+    </form>
 
-    		<br><br>
-
-   		<button type="submit">Login</button>
-
-</form>
-
-<br>
-
-<a href="register.html">Create an account</a>
-
+    <p class="switch"><a href="register.html">Create an account</a></p>
 
 </body>
 </html>
