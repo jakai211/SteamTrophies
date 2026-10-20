@@ -1,18 +1,44 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Welcome</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+            text-align: center;
+            padding: 4rem 1rem;
+        }
 
+        form {
+            margin-top: 2rem;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid #222;
+            border-radius: 6px;
+            background: #222;
+            color: #fff;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #fff;
+            color: #222;
+        }
+    </style>
 </head>
 <body>
 
     <h1 id="welcome"></h1>
 
     <form id="logout" action="logout.php" method="POST" hidden>
-    
-	    <button type="submit">Logout</button>
-   
+        <button type="submit">Logout</button>
     </form>
 
     <script>
@@ -44,3 +70,4 @@
 
     </script>
 </body>
+</html>

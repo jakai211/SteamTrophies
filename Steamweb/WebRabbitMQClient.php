@@ -1,5 +1,4 @@
 <?php
-
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
@@ -65,11 +64,19 @@ else
 {
     if (isset($response['success']) && $response['success'] === true)
     {
-        echo "Registration successful.";
+        echo "<h2>Registration Successful!</h2>";
+        echo "<p>Your account has been created successfully.</p>";
+        echo '<form action="login.html" method="get">';
+        echo '<button type="submit">Back to Login</button>';
+        echo '</form>';
     }
     else
     {
-        echo "Username Already Taken";
+        echo "<h2>Registration Failed</h2>";
+        echo "<p>Username Already Taken</p>";
+        echo '<form action="login.html" method="get">';
+        echo '<button type="submit">Back to Login</button>';
+        echo '</form>';
     }
 }
 ?>
