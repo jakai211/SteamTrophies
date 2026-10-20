@@ -31,8 +31,11 @@ function makeSession($username)
 {
     $mydb = connectDB(); //connect
 
-    // $stmt = $mydb->prepare("DELETE FROM sessions WHERE expires_at <= NOW()"); //added a delete token for expired ones
-    // $stmt->execute(); //execute command before starting
+    // delete expired sessions first (epoch seconds)
+    $now = time();
+    $stmt = $mydb->prepare("DELETE FROM sessions WHERE expires_at <= ?");
+    $stmt->bind_param("i", $now);
+    $stmt->execute();
 
     // get the user's id
     $stmt = $mydb->prepare("SELECT id FROM users WHERE username = ?"); //similar to before
@@ -40,13 +43,18 @@ function makeSession($username)
     $stmt->execute(); //similar to before
     $user = $stmt->get_result()->fetch_assoc();
 
-    // make a token that lasts one hour and save it (researched online for how to do this)
+    // remove this user's previous sessions so only one token is valid at a time
+    $stmt = $mydb->prepare("DELETE FROM sessions WHERE user_id = ?");
+    $stmt->bind_param("i", $user['id']);
+    $stmt->execute();
+
+    // make a token that lasts one hour and save it(researched online for how to do this)
     $token = bin2hex(random_bytes(32));
-    $expires = date("Y-m-d H:i:s", time() + 3600);
+    $expires = time() + 3600;
 
     $stmt = $mydb->prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)"); // this will help ready a new SQL command to save the session details into the database.
 
-    $stmt->bind_param("sis", $token, $user['id'], $expires); //binds these values into ???
+    $stmt->bind_param("sii", $token, $user['id'], $expires);    
     $stmt->execute();//run and save to database
 
     return $token;//return the token so the rest of it can be used
@@ -79,13 +87,20 @@ function doValidate($sessionId) // creating the missing validate function from t
 {
     $mydb = connectDB(); //connect
 
-    $stmt = $mydb->prepare("SELECT user_id FROM sessions WHERE token = ? AND expires_at > NOW()"); //validate the tokens expiration and token itself
-    $stmt->bind_param("s", $sessionId);//bind
+    $now = time();
+    $stmt = $mydb->prepare(  //changed to match Jakai's validateToken
+      "SELECT users.username 
+       FROM sessions
+       JOIN users ON users.id = sessions.user_id
+       WHERE sessions.token = ? AND sessions.expires_at > ?"
+    ); // getting the user from the db
+    $stmt->bind_param("si", $sessionId, $now);
     $stmt->execute();
 
-    if ($stmt->get_result()->num_rows == 1) //checks 
+    $row = $stmt->get_result()->fetch_assoc();
+    if ($row)
     {
-        return true;
+        return $row['username']; //the username that owns this token
     }
     return false;
 }
@@ -101,7 +116,7 @@ function doLogout($sessionId)
     return true;
 }
 
-function requestProcessor($request)
+function handleRequest($request)
 {
   echo "received request".PHP_EOL;
   //var_dump($request);
@@ -109,46 +124,54 @@ function requestProcessor($request)
   {
     return "ERROR: unsupported message type";
   }
-   echo "type: ".$request['type'].PHP_EOL; //prints and logs in the listener's terminal
-  try                                            
-  {    
-    switch ($request['type'])
-    {
-        case "login":
-        if (doLogin($request['username'],$request['password']))
+  switch ($request['type'])
+  {
+    case "login":
+      if (doLogin($request['username'],$request['password']))
+      {
+        $token = makeSession($request['username']);
+        return array("success" => true, "message" => "login ok", "token" => $token);
+      }
+      return array("success" => false, "message" => "wrong username or password");
+    case "register": //added a case to register
+      if (doRegister($request['username'],$request['password']))
         {
-            $token = makeSession($request['username']);
-            return array("success" => true, "message" => "login ok", "token" => $token);
+            return array("success" => true, "message" => "account created"); //if true show that the account is create
         }
-        return array("success" => false, "message" => "wrong username or password");
-        case "register": //added a case to register
-        if (doRegister($request['username'],$request['password']))
-            {
-                return array("success" => true, "message" => "account created"); //if true show that the account is create
-            }
-        return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
-        case "validate_session":
-        if (doValidate($request['sessionId']))
-        {
-            return array("success" => true, "message" => "session valid");
-        }
-        return array("success" => false, "message" => "session invalid");
-        case "logout":
-        if (doLogout($request['sessionId']))
-        {
-            return array("success" => true, "message" => "logged out");
-        }
-        return array("success" => false, "message" => "logout failed");
-    }
-  }    
-  catch (Throwable $e)                          //helps catch and explain errors for mysql
-  {                                              
-    echo "ERROR: ".$e->getMessage().PHP_EOL;     
-    return array("success" => false, "message" => "server error");  
-  }                                              
+      return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
+    case "validate_session":
+      $username = doValidate($request['sessionId']); //changed to match Jakai's validateToken file
+      if ($username !== false)
+      {
+        return array("success" => true, "message" => "session valid", "username" => $username); //returning the username that he needed
+      }
+      return array("success" => false, "message" => "session invalid");
+    case "logout":
+      if (doLogout($request['sessionId']))
+      {
+        return array("success" => true, "message" => "logged out");
+      }
+      return array("success" => false, "message" => "logout failed");
+  }
   return array("returnCode" => '0', 'message'=>"Server received request and processed");
 }
 
+function requestProcessor($request)
+{
+  echo "request: type=".($request['type'] ?? 'NONE')
+      ." user=".($request['username'] ?? '-').PHP_EOL;
+  try
+  {
+    $result = handleRequest($request);
+  }
+  catch (Throwable $e)
+  {
+    echo "ERROR: ".$e->getMessage().PHP_EOL;
+    return array("success" => false, "message" => "server error");
+  }
+  echo "result: ".json_encode($result).PHP_EOL;
+  return $result;
+}
 $server = new rabbitMQServer("databaseRabbitMQ.ini","databaseServer");   // CHANGED to the new database ini and this databse file
 
 echo "testRabbitMQServer BEGIN".PHP_EOL;
@@ -156,4 +179,3 @@ $server->process_requests('requestProcessor');
 echo "testRabbitMQServer END".PHP_EOL;
 exit();
 ?>
-
