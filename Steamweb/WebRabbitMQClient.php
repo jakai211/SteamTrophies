@@ -64,19 +64,23 @@ else
 {
     if (isset($response['success']) && $response['success'] === true)
     {
-        echo "<h2>Registration Successful!</h2>";
-        echo "<p>Your account has been created successfully.</p>";
-        echo '<form action="login.html" method="get">';
-        echo '<button type="submit">Back to Login</button>';
-        echo '</form>';
+        echo "<script>
+                alert('Registration successful! Please log in.');
+                window.location.href = 'login.html';
+              </script>";
+        exit();
     }
     else
     {
-        echo "<h2>Registration Failed</h2>";
-        echo "<p>Username Already Taken</p>";
-        echo '<form action="login.html" method="get">';
-        echo '<button type="submit">Back to Login</button>';
-        echo '</form>';
+        $message = isset($response['message'])
+            ? $response['message']
+            : "Registration failed. Please try again.";
+
+        echo "<script>
+                alert(" . json_encode($message) . ");
+                window.location.href = 'register.html';
+              </script>";
+        exit();
     }
 }
 ?>
