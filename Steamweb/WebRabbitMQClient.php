@@ -64,7 +64,10 @@ else
 {
     if (isset($response['success']) && $response['success'] === true)
     {
-        header("Location: ../Steamweb/login.html?registered=success");
+        echo "<script>
+                alert('Registration successful! Please log in.');
+                window.location.href = 'login.html';
+              </script>";
         exit();
     }
     else
@@ -75,7 +78,7 @@ else
 
         echo "<script>
                 alert(" . json_encode($message) . ");
-                window.location.href = '../Steamweb/register.html';
+                window.location.href = 'register.html';
               </script>";
         exit();
     }
