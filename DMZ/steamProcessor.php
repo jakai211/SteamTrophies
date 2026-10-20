@@ -153,7 +153,8 @@ function getAchievements($user, $appId)
         "returnCode"   => '1',
         "steamId"      => $steamId,
         "appId"        => intval($appId),
-        "total"        => count($list),
+        "gameName"     => isset($mine["playerstats"]["gameName"]) ? $mine["playerstats"]["gameName"] : "",
+        "total"        => count($mine["playerstats"]["achievements"]),
         "unlocked"     => $unlocked,
         "achievements" => $list
     );
