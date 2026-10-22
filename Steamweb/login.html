@@ -77,5 +77,14 @@
 
     <p class="switch"><a href="register.html">Create an account</a></p>
 
+    <script>
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get('registered') === 'success') {
+        alert('Registration successful! Please log in.');
+        window.history.replaceState({}, document.title, 'login.html');
+    }
+    </script>
+    
 </body>
 </html>
