@@ -18,7 +18,7 @@ $client = new rabbitMQClient("WebRabbitMQ.ini", "testServer");
 
 $request = array();
 $request['type'] = "validate_session";
-$request['session_id'] = $_COOKIE['session_token'];
+$request['sessionId'] = $_COOKIE['session_token'];
 
 $response = $client->send_request($request);
 
