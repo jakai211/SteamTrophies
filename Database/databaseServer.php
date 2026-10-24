@@ -7,7 +7,9 @@ require_once('databaseConnection.php');  // gives us connectDB() that will be us
 
 
 function doLogin($username,$password)
-{
+{ 
+    $username = trim($username); //trim to remove white spaces - good practice I found online
+
     $mydb = connectDB();   // needs to connect to database for what I've changed
     
     // lookup username in database
@@ -65,19 +67,46 @@ function doRegister($firstName,$lastName,$email,$username,$password) //replaced 
 { //email is needed for what we are working on for email notifications
     $mydb = connectDB(); //connect again
 
+    // need to use trim in case they add white spaces - good practice on validation I found online
+    $firstName = trim($firstName);
+    $lastName = trim($lastName);
+    $email = trim($email);
+    $username = trim($username);
+
+    // nothing can be blank - good practice
+    if ($firstName === '' || $lastName === '' || $username === '' || $password === '')
+    {
+        return "All fields are required";
+    }
+
+    // validation checks to make sure the email is correct format and isn't something random
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL))
+    {
+        return "Invalid email";
+    }
+
     // basic check to make sure that the username they create isn't already taken
     $stmt = $mydb->prepare("SELECT id FROM users WHERE username = ?"); 
     $stmt->bind_param("s", $username); //binding the username
     $stmt->execute(); //running it
     if ($stmt->get_result()->num_rows > 0) // checks whether the name matches with another user within the database
     {
-        return false; //return false if its geater that 1 (matches with a name from the db)
+       return "Username already taken"; //changed false to return something that will help explain error
+    }
+
+    // used the same code for username for the email
+    $stmt = $mydb->prepare("SELECT id FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0)
+    {
+        return "Email already in use"; // using this instead of false to help prevent errors
     }
 
     // was created from what I saw online for hashed passwords
     $hash = password_hash($password, PASSWORD_DEFAULT); 
-    $stmt = $mydb->prepare("INSERT INTO users (username, password_hash) VALUES (?, ?)");
-    $stmt->bind_param("ss", $username, $hash);
+    $stmt = $mydb->prepare("INSERT INTO users (first_name, last_name, email, username, password_hash) VALUES (?, ?, ?, ?, ?)"); //updated
+    $stmt->bind_param("sssss", $firstName, $lastName, $email, $username, $hash);
     $stmt->execute();
 
     return true; //returns true
