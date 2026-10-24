@@ -61,8 +61,8 @@ function makeSession($username)
 }
 
 // need to create a register function because we have one :/
-function doRegister($username,$password) // it will need username and password for now 
-{
+function doRegister($firstName,$lastName,$email,$username,$password) //replaced to add first and last names and email that we did not do for auth
+{ //email is needed for what we are working on for email notifications
     $mydb = connectDB(); //connect again
 
     // basic check to make sure that the username they create isn't already taken
