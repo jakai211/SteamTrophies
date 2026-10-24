@@ -118,7 +118,7 @@ function doValidate($sessionId) // creating the missing validate function from t
 
     $now = time();
     $stmt = $mydb->prepare(  //changed to match Jakai's validateToken
-      "SELECT users.username 
+      "SELECT users.username, users.first_name, users.last_name
        FROM sessions
        JOIN users ON users.id = sessions.user_id
        WHERE sessions.token = ? AND sessions.expires_at > ?"
@@ -129,7 +129,7 @@ function doValidate($sessionId) // creating the missing validate function from t
     $row = $stmt->get_result()->fetch_assoc();
     if ($row)
     {
-        return $row['username']; //the username that owns this token
+        return $row; //reutns username, first, and last name
     }
     return false;
 }
@@ -163,16 +163,29 @@ function handleRequest($request)
       }
       return array("success" => false, "message" => "wrong username or password");
     case "register": //added a case to register
-      if (doRegister($request['username'],$request['password']))
+      $result = doRegister( //seperating it instead of putting it all in one if statement now were going to use result to store this
+        $request['first_name'] ?? '',
+        $request['last_name'] ?? '',
+        $request['email'] ?? '',
+        $request['username'] ?? '',
+        $request['password'] ?? ''
+      );
+      if ($result === true)
         {
             return array("success" => true, "message" => "account created"); //if true show that the account is create
         }
-      return array("success" => false, "message" => "username already taken"); //if not then that the username is taken
+      return array("success" => false, "message" => $result); //changed since I already handle the error cases above now so it will give back the error
     case "validate_session":
-      $username = doValidate($request['sessionId']); //changed to match Jakai's validateToken file
-      if ($username !== false)
+      $row = doValidate($request['sessionId']); //updated to hold new var and matches Jakai's validateToken file
+      if ($row !== false)
       {
-        return array("success" => true, "message" => "session valid", "username" => $username); //returning the username that he needed
+        return array(
+          "success" => true, 
+          "message" => "session valid", 
+          "username" => $row['username'],
+          "first_name" => $row['first_name'],
+          "last_name" => $row['last_name']
+          ); //updated and w/first and last
       }
       return array("success" => false, "message" => "session invalid");
     case "logout":
