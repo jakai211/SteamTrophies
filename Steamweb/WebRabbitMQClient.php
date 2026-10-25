@@ -1,4 +1,5 @@
 <?php
+
 require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
@@ -64,23 +65,11 @@ else
 {
     if (isset($response['success']) && $response['success'] === true)
     {
-        echo "<script>
-                alert('Registration successful! Please log in.');
-                window.location.href = 'login.html';
-              </script>";
-        exit();
+        echo "Registration successful.";
     }
     else
     {
-        $message = isset($response['message'])
-            ? $response['message']
-            : "Registration failed. Please try again.";
-
-        echo "<script>
-                alert(" . json_encode($message) . ");
-                window.location.href = 'register.html';
-              </script>";
-        exit();
+        echo "Username Already Taken";
     }
 }
 ?>

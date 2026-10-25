@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>SteamTrophies Test</title>
+<style>
+body {font-family:Arial;background:#18212b;color:white;max-width:1100px;margin:30px auto;padding:20px}
+input,button {padding:9px;margin:3px}
+button {cursor:pointer}
+a {color:#8dd2ff}
+table {width:100%;border-collapse:collapse;margin:15px 0}
+th,td {text-align:left;padding:10px;border-bottom:1px solid #445365}
+#avatar {width:100px;border-radius:8px}
+.achievement {display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #445365}
+.achievement img {width:64px;height:64px}
+.achievement p {margin:5px 0}
+.muted {color:#b9c6d3}
+</style>
+</head>
+<body>
+<h1>SteamTrophies Test</h1>
+<form id="steamForm">
+<label for="user">SteamID or custom profile name:</label>
+<input id="user" name="user" required>
+<button id="loadButton">Load Profile</button>
+</form>
+<p id="message"></p>
+
+<section id="profile" hidden>
+<img id="avatar" alt="Steam avatar">
+<h2 id="username"></h2>
+<p id="steamId"></p>
+<a id="profileLink" target="_blank" rel="noopener noreferrer">View Steam Profile</a>
+<p id="summary"></p>
+
+<h2>Recently Played</h2>
+<p id="recentMessage"></p>
+<table>
+<thead><tr><th>Game</th><th>Hours — Last 2 Weeks</th><th>Total Hours</th></tr></thead>
+<tbody id="recentList"></tbody>
+</table>
+
+<h2>Game Library</h2>
+<label for="search">Search:</label>
+<input id="search" type="search">
+<table>
+<thead><tr><th>Game</th><th>App ID</th><th>Hours</th><th>Achievements</th></tr></thead>
+<tbody id="gameList"></tbody>
+</table>
+</section>
+
+<section id="achievementSection" hidden>
+<h2 id="achievementTitle">Achievements</h2>
+<p id="achievementMessage"></p>
+<div id="achievementList"></div>
+</section>
+
+<script>
+let games = [];
+let steamId = "";
+let profileVersion = 0;
+let achievementVersion = 0;
+
+function element(id) {
+    return document.getElementById(id);
+}
+function hours(minutes) {
+    return (Number(minutes || 0) / 60).toFixed(1);
+}
+function safeImage(img, url) {
+    img.hidden = true;
+    img.removeAttribute("src");
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== "https:") return;
+        img.src = parsed.href;
+        img.hidden = false;
+        img.onerror = () => { img.hidden = true; };
+    } catch (error) {}
+}
+async function api(action, fields) {
+    const body = new URLSearchParams({action, ...fields});
+    const response = await fetch("getSteamTest.php", {
+        method: "POST",
+        body
+    });
+    const text = await response.text();
+    let result;
+    try {
+        result = JSON.parse(text);
+    } catch (error) {
+        throw new Error("PHP returned invalid JSON. Check the Network response.");
+    }
+    if (!response.ok || result.returnCode !== "1") {
+        throw new Error(result.message || "Request failed.");
+    }
+    return result;
+}
+function showGames() {
+    const search = element("search").value.toLowerCase();
+    const list = element("gameList");
+    list.replaceChildren();
+    for (const game of games) {
+        const name = String(game.name || game.appId);
+        if (!name.toLowerCase().includes(search)) continue;
+        const row = list.insertRow();
+        row.insertCell().textContent = name;
+        row.insertCell().textContent = game.appId;
+        row.insertCell().textContent = Number(game.hoursPlayed || 0).toFixed(1);
+        const button = document.createElement("button");
+        button.textContent = "View";
+        button.addEventListener("click", () => loadAchievements(game));
+        row.insertCell().appendChild(button);
+    }
+}
+async function loadRecent(user, version) {
+    element("recentMessage").textContent = "Loading recent playtime...";
+    try {
+        const result = await api("recent", {user});
+        if (version !== profileVersion) return;
+        const list = element("recentList");
+        list.replaceChildren();
+        let minutes = 0;
+        for (const game of result.games) {
+            minutes += Number(game.minutesLastTwoWeeks || 0);
+            const row = list.insertRow();
+            row.insertCell().textContent = game.name || game.appId;
+            row.insertCell().textContent = hours(game.minutesLastTwoWeeks);
+            row.insertCell().textContent = Number(game.hoursPlayed || 0).toFixed(1);
+        }
+        element("recentMessage").textContent = result.games.length
+            ? result.games.length + " games • " + hours(minutes) + " hours in the last 2 weeks"
+            : "No recent games returned by Steam.";
+    } catch (error) {
+        if (version === profileVersion) {
+            element("recentMessage").textContent = error.message;
+        }
+    }
+}
+async function loadAchievements(game) {
+    const version = ++achievementVersion;
+    element("achievementSection").hidden = false;
+    element("achievementTitle").textContent = "Achievements — " + (game.name || game.appId);
+    element("achievementList").replaceChildren();
+    element("achievementMessage").textContent = "Loading achievements...";
+    element("achievementSection").scrollIntoView({behavior: "smooth"});
+    try {
+        const result = await api("achievements", {user: steamId, appId: game.appId});
+        if (version !== achievementVersion) return;
+        const percent = result.total ? Math.round(result.unlocked / result.total * 100) : 0;
+        element("achievementMessage").textContent =
+            result.unlocked + "/" + result.total + " unlocked • " + percent + "% complete" +
+            (result.warning ? " — " + result.warning : "");
+
+        const items = [...result.achievements];
+        items.sort((a,b) => Number(b.unlocked) - Number(a.unlocked));
+        for (const item of items) {
+            const card = document.createElement("div");
+            card.className = "achievement";
+            const image = document.createElement("img");
+            image.alt = "";
+            safeImage(image, item.unlocked ? item.icon : item.iconLocked);
+
+            const details = document.createElement("div");
+            const title = document.createElement("strong");
+            title.textContent = (item.unlocked ? "✓ " : "○ ") + item.name;
+            const description = document.createElement("p");
+            description.textContent = item.description || "";
+
+            const status = document.createElement("p");
+            status.className = "muted";
+            let text = item.unlocked ? "Unlocked" : "Locked";
+            if (item.unlocked && Number(item.unlockTime) > 0) {
+                text += " • " + new Date(Number(item.unlockTime) * 1000).toLocaleString();
+            }
+            text += item.globalPercent == null
+                ? " • Rarity unavailable"
+                : " • " + item.globalPercent + "% of players unlocked";
+            status.textContent = text;
+
+            details.append(title, description, status);
+            card.append(image, details);
+            element("achievementList").appendChild(card);
+        }
+    } catch (error) {
+        if (version === achievementVersion) {
+            element("achievementMessage").textContent = error.message;
+        }
+    }
+}
+element("search").addEventListener("input", showGames);
+element("steamForm").addEventListener("submit", async function(event) {
+    event.preventDefault();
+    const version = ++profileVersion;
+    achievementVersion++;
+    element("loadButton").disabled = true;
+    element("profile").hidden = true;
+    element("achievementSection").hidden = true;
+    element("recentList").replaceChildren();
+    element("message").textContent = "Loading Steam profile...";
+    try {
+        const result = await api("profile", {user: element("user").value.trim()});
+        steamId = result.profile.steamId;
+        element("username").textContent = result.profile.name;
+        element("steamId").textContent = "SteamID: " + steamId;
+        safeImage(element("avatar"), result.profile.avatar);
+        element("profileLink").href =
+            "https://steamcommunity.com/profiles/" + encodeURIComponent(steamId);
+
+        games = result.games;
+        games.sort((a,b) => Number(b.hoursPlayed) - Number(a.hoursPlayed));
+        const totalMinutes = games.reduce((sum, game) =>
+            sum + Number(game.minutesPlayed ?? Number(game.hoursPlayed || 0) * 60), 0);
+        element("summary").textContent =
+            games.length + " games • " + hours(totalMinutes) + " total hours";
+        element("search").value = "";
+        showGames();
+        element("profile").hidden = false;
+        element("message").textContent = result.message || "";
+        loadRecent(steamId, version);
+    } catch (error) {
+        element("message").textContent = error.message;
+    } finally {
+        element("loadButton").disabled = false;
+    }
+});
+</script>
+</body>
+</html>
