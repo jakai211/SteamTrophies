@@ -31,6 +31,7 @@ function doLogin($username,$password)
 
 function makeSession($username) 
 {
+    $username = trim($username); //same trim as doLogin so it actually matches - fix
     $mydb = connectDB(); //connect
 
     // delete expired sessions first (epoch seconds)
@@ -145,13 +146,93 @@ function doLogout($sessionId)
     return true;
 }
 
+// finds which user a token belongs to (false if the token is fake or expired)
+// the user id always comes from the token, never from the request
+function getUserIdFromSession($sessionId)
+{
+    $mydb = connectDB(); //connect
+
+    $now = time();
+    $stmt = $mydb->prepare("SELECT user_id FROM sessions WHERE token = ? AND expires_at > ?");
+    $stmt->bind_param("si", $sessionId, $now);
+    $stmt->execute();
+
+    $row = $stmt->get_result()->fetch_assoc();
+    if ($row)
+    {
+        return $row['user_id'];
+    }
+    return false;
+}
+
+// ties a steam account to the logged in user
+// returns true if it worked, or a message (string) saying why it didn't
+function doLinkSteam($sessionId,$steamId)
+{
+    $mydb = connectDB(); //connect
+
+    // steam ids are 17 digits 
+    if (!preg_match('/^[0-9]{17}$/', $steamId))
+    {
+        return "Invalid Steam ID";
+    }
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    // make sure another user doesn't already have this steam account
+    $stmt = $mydb->prepare("SELECT user_id FROM user_steam_links WHERE steam_id = ? AND user_id <> ?");
+    $stmt->bind_param("si", $steamId, $userId);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows > 0)
+    {
+        return "Steam account already linked to another user";
+    }
+
+    // the profile row has to exist first (foreign key), the name and avatar get filled in later
+    $stmt = $mydb->prepare("INSERT IGNORE INTO steam_profiles (steam_id) VALUES (?)");
+    $stmt->bind_param("s", $steamId);
+    $stmt->execute();
+
+    // save the link, if they already had one it gets replaced (epoch time)
+    $now = time();
+    $stmt = $mydb->prepare("INSERT INTO user_steam_links (user_id, steam_id, verified_at) VALUES (?, ?, ?)
+                            ON DUPLICATE KEY UPDATE steam_id = VALUES(steam_id), verified_at = VALUES(verified_at)");
+    $stmt->bind_param("isi", $userId, $steamId, $now);
+    $stmt->execute();
+
+    return true;
+}
+
+// removes the steam link, the website account stays
+function doUnlinkSteam($sessionId)
+{
+    $mydb = connectDB(); //connect
+
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return false;
+    }
+
+    $stmt = $mydb->prepare("DELETE FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+
+    return true;
+}
+
 function handleRequest($request)
 {
   echo "received request".PHP_EOL;
   //var_dump($request);
   if(!isset($request['type']))
   {
-    return "ERROR: unsupported message type";
+    return array("success" => false, "message" => "ERROR: missing request type"); //updated
   }
   switch ($request['type'])
   {
@@ -194,8 +275,21 @@ function handleRequest($request)
         return array("success" => true, "message" => "logged out");
       }
       return array("success" => false, "message" => "logout failed");
+    case "link_steam": //steamId comes from the web side's verified steam login
+      $result = doLinkSteam($request['sessionId'] ?? '', $request['steamId'] ?? '');
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "steam linked");
+      }
+      return array("success" => false, "message" => $result);
+    case "unlink_steam":
+      if (doUnlinkSteam($request['sessionId'] ?? ''))
+      {
+        return array("success" => true, "message" => "steam unlinked");
+      }
+      return array("success" => false, "message" => "session invalid");
   }
-  return array("returnCode" => '0', 'message'=>"Server received request and processed");
+  return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
 
 function requestProcessor($request)
