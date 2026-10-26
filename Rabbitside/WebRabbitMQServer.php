@@ -17,6 +17,10 @@ function requestProcessor($request) {
         case "validate_session":
         case "link_steam":
         case "unlink_steam":
+        case "add_wishlist":
+        case "remove_wishlist":
+        case "set_wishlist_notify":
+        case "get_wishlist":
         case "logout":
             $client = new rabbitMQClient ("databaseRabbitMQ.ini", "databaseServer");
 
