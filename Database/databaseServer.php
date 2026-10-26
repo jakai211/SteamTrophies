@@ -327,6 +327,175 @@ function saveSteamLibrary($sessionId,$library)
     return true;
 }
 
+// saves a get_recent_playtime reply from the DMZ (steamId + games list) into player_games
+// returns true if it worked, or a message (string) saying why it didn't
+function saveSteamRecent($sessionId,$recent)
+{
+    $mydb = connectDB(); //connect
+    $mydb->set_charset("utf8mb4"); //so game names save correctly
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    if (!is_array($recent))
+    {
+        return "Invalid recent playtime data";
+    }
+
+    $steamId = $recent['steamId'] ?? '';
+    $games = $recent['games'] ?? array();
+
+    if (!preg_match('/^[0-9]{17}$/', $steamId))
+    {
+        return "Invalid Steam ID";
+    }
+
+    if (!is_array($games))
+    {
+        return "Invalid games list";
+    }
+
+    // only save for the steam account linked to this user
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link || $link['steam_id'] !== $steamId)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    $now = time(); //epoch
+
+    // anything not in this list wasn't played in the last 2 weeks, so set it to 0 first
+    // (an empty list is allowed here, it just means they didn't play anything)
+    $stmt = $mydb->prepare("UPDATE player_games SET minutes_last_two_weeks = 0, recent_playtime_updated_at = ? WHERE steam_id = ?");
+    $stmt->bind_param("is", $now, $steamId);
+    $stmt->execute();
+
+    foreach ($games as $game)
+    {
+        $appId = (int)($game['appId'] ?? 0);
+        if ($appId <= 0)
+        {
+            continue; //skip anything without a real app id
+        }
+        $name = $game['name'] ?? '';
+        $minutes = (int)($game['minutesLastTwoWeeks'] ?? 0);
+
+        // the game has to exist first (foreign key), if it's already there leave it alone
+        $stmt = $mydb->prepare("INSERT IGNORE INTO games (app_id, name) VALUES (?, ?)");
+        $stmt->bind_param("is", $appId, $name);
+        $stmt->execute();
+
+        // then the recent minutes, this does NOT mark the game as owned
+        $stmt = $mydb->prepare("INSERT INTO player_games (steam_id, app_id, minutes_last_two_weeks, recent_playtime_updated_at)
+                                VALUES (?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE minutes_last_two_weeks = VALUES(minutes_last_two_weeks),
+                                recent_playtime_updated_at = VALUES(recent_playtime_updated_at)");
+        $stmt->bind_param("siii", $steamId, $appId, $minutes, $now);
+        $stmt->execute();
+    }
+
+    return true;
+}
+
+// gets the saved steam profile for the logged in user
+// returns an array (steamId, name, avatar, profileUrl, updatedAt) if it worked, or a message (string) saying why it didn't
+function getSteamProfile($sessionId)
+{
+    $mydb = connectDB(); //connect
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    // the steam id comes from the user's link, never from the request
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    $stmt = $mydb->prepare("SELECT steam_id, display_name, avatar_url, profile_url, profile_updated_at FROM steam_profiles WHERE steam_id = ?");
+    $stmt->bind_param("s", $link['steam_id']);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    if (!$row)
+    {
+        return "No saved profile yet";
+    }
+
+    return array(
+        "steamId" => $row['steam_id'],
+        "name" => $row['display_name'] ?? '',
+        "avatar" => $row['avatar_url'] ?? '',
+        "profileUrl" => $row['profile_url'] ?? '',
+        "updatedAt" => $row['profile_updated_at'] //epoch, NULL if it was never saved
+    );
+}
+
+// gets the saved games (owned only) for the logged in user
+// returns an array of games if it worked, or a message (string) saying why it didn't
+function getSteamLibrary($sessionId)
+{
+    $mydb = connectDB(); //connect
+    $mydb->set_charset("utf8mb4"); //so names like DARK SOULS™ come back correctly
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    // the steam id comes from the user's link, never from the request
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    // only games they own, most played first
+    $stmt = $mydb->prepare("SELECT g.app_id, g.name, g.icon_hash, pg.minutes_played, pg.minutes_last_two_weeks
+                            FROM player_games pg
+                            JOIN games g ON g.app_id = pg.app_id
+                            WHERE pg.steam_id = ? AND pg.in_owned_library = 1
+                            ORDER BY pg.minutes_played DESC");
+    $stmt->bind_param("s", $link['steam_id']);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $games = array();
+    while ($row = $result->fetch_assoc())
+    {
+        $minutes = (int)($row['minutes_played'] ?? 0);
+        $games[] = array(
+            "appId" => (int)$row['app_id'],
+            "name" => $row['name'],
+            "icon" => $row['icon_hash'] ?? '',
+            "minutesPlayed" => $minutes,
+            "hoursPlayed" => round($minutes / 60, 1), //steam gives minutes, the page wants hours
+            "minutesLastTwoWeeks" => (int)($row['minutes_last_two_weeks'] ?? 0)
+        );
+    }
+
+    return $games;
+}
+
 // removes the steam link, the website account stays
 function doUnlinkSteam($sessionId)
 {
@@ -419,6 +588,27 @@ function handleRequest($request)
       if ($result === true)
       {
         return array("success" => true, "message" => "library saved");
+      }
+      return array("success" => false, "message" => $result);
+    case "save_steam_recent": //recent is the raw get_recent_playtime reply from the DMZ
+      $result = saveSteamRecent($request['sessionId'] ?? '', $request['recent'] ?? array());
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "recent playtime saved");
+      }
+      return array("success" => false, "message" => $result);
+    case "get_steam_profile":
+      $result = getSteamProfile($request['sessionId'] ?? '');
+      if (is_array($result))
+      {
+        return array("success" => true, "message" => "profile loaded", "profile" => $result);
+      }
+      return array("success" => false, "message" => $result);
+    case "get_steam_library":
+      $result = getSteamLibrary($request['sessionId'] ?? '');
+      if (is_array($result))
+      {
+        return array("success" => true, "message" => "library loaded", "games" => $result);
       }
       return array("success" => false, "message" => $result);
   }

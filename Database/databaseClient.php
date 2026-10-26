@@ -16,13 +16,17 @@ if (!isset($argv[1]))
   echo "  php databaseClient.php link_steam <token> <17-digit steamId>".PHP_EOL;
   echo "  php databaseClient.php unlink_steam <token>".PHP_EOL;
   echo "  php databaseClient.php save_steam_profile <token> <steamId> <name> <avatarUrl> <profileUrl>".PHP_EOL;
+  echo "  php databaseClient.php save_steam_library <token> <steamId> <games.json>".PHP_EOL;
+  echo "  php databaseClient.php save_steam_recent <token> <steamId> <recent.json>".PHP_EOL;
+  echo "  php databaseClient.php get_steam_profile <token>".PHP_EOL;
+  echo "  php databaseClient.php get_steam_library <token>".PHP_EOL;
   exit(1);
 }
 
 $request = array();
 $request['type'] = $argv[1];
 
-if ($argv[1] === 'validate_session' || $argv[1] === 'logout' || $argv[1] === 'unlink_steam')
+if ($argv[1] === 'validate_session' || $argv[1] === 'logout' || $argv[1] === 'unlink_steam' || $argv[1] === 'get_steam_profile' || $argv[1] === 'get_steam_library')  
 {
   $request['sessionId'] = $argv[2] ?? '';
 }
@@ -47,6 +51,16 @@ else if ($argv[1] === 'save_steam_library')
   $games = is_file($file) ? json_decode(file_get_contents($file), true) : array();
   $request['sessionId'] = $argv[2] ?? '';
   $request['library'] = array(
+    "steamId" => $argv[3] ?? '',
+    "games" => is_array($games) ? $games : array()
+  );
+}
+else if ($argv[1] === 'save_steam_recent')
+{
+  $file = $argv[4] ?? '';
+  $games = is_file($file) ? json_decode(file_get_contents($file), true) : array();
+  $request['sessionId'] = $argv[2] ?? '';
+  $request['recent'] = array(
     "steamId" => $argv[3] ?? '',
     "games" => is_array($games) ? $games : array()
   );
