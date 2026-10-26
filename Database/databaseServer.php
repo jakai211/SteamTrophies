@@ -258,6 +258,75 @@ function saveSteamProfile($sessionId,$profile)
     return true;
 }
 
+// saves a get_owned_games reply from the DMZ (steamId + games list) into games and player_games
+// returns true if it worked, or a message (string) saying why it didn't
+function saveSteamLibrary($sessionId,$library)
+{
+    $mydb = connectDB(); //connect
+    $mydb->set_charset("utf8mb4"); //so names like DARK SOULS™ save correctly, found how to do this online
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $steamId = $library['steamId'] ?? '';
+    $games = $library['games'] ?? array();
+
+    if (!preg_match('/^[0-9]{17}$/', $steamId))
+    {
+        return "Invalid Steam ID";
+    }
+
+    // an empty list would look like "they own nothing", so don't save it
+    if (!is_array($games) || count($games) === 0)
+    {
+        return "No games to save";
+    }
+
+    // only save for the steam account linked to this user
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link || $link['steam_id'] !== $steamId)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    $now = time(); //epoch
+
+    foreach ($games as $game)
+    {
+        $appId = (int)($game['appId'] ?? 0);
+        if ($appId <= 0)
+        {
+            continue; //skip anything without a real app id
+        }
+        $name = $game['name'] ?? '';
+        $icon = $game['icon'] ?? '';
+        $minutes = (int)($game['minutesPlayed'] ?? 0);
+
+        // the game has to exist first (foreign key)
+        $stmt = $mydb->prepare("INSERT INTO games (app_id, name, icon_hash) VALUES (?, ?, ?)
+                                ON DUPLICATE KEY UPDATE name = VALUES(name), icon_hash = VALUES(icon_hash)");
+        $stmt->bind_param("iss", $appId, $name, $icon);
+        $stmt->execute();
+
+        // then this player's row for that game
+        $stmt = $mydb->prepare("INSERT INTO player_games (steam_id, app_id, in_owned_library, minutes_played, library_updated_at, playtime_updated_at)
+                                VALUES (?, ?, 1, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE in_owned_library = 1, minutes_played = VALUES(minutes_played),
+                                library_updated_at = VALUES(library_updated_at), playtime_updated_at = VALUES(playtime_updated_at)");
+        $stmt->bind_param("siiii", $steamId, $appId, $minutes, $now, $now);
+        $stmt->execute();
+    }
+
+    return true;
+}
+
 // removes the steam link, the website account stays
 function doUnlinkSteam($sessionId)
 {
@@ -343,6 +412,13 @@ function handleRequest($request)
       if ($result === true)
       {
         return array("success" => true, "message" => "profile saved");
+      }
+      return array("success" => false, "message" => $result);
+    case "save_steam_library": //library is the raw get_owned_games reply from the DMZ
+      $result = saveSteamLibrary($request['sessionId'] ?? '', $request['library'] ?? array());
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "library saved");
       }
       return array("success" => false, "message" => $result);
   }

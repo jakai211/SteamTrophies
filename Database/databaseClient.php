@@ -41,6 +41,16 @@ else if ($argv[1] === 'save_steam_profile')
     "profileUrl" => $argv[6] ?? ''
   );
 }
+else if ($argv[1] === 'save_steam_library')
+{
+  $file = $argv[4] ?? '';
+  $games = is_file($file) ? json_decode(file_get_contents($file), true) : array();
+  $request['sessionId'] = $argv[2] ?? '';
+  $request['library'] = array(
+    "steamId" => $argv[3] ?? '',
+    "games" => is_array($games) ? $games : array()
+  );
+}
 else
 {
   $request['username'] = $argv[2] ?? '';
