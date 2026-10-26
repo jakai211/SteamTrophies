@@ -505,6 +505,34 @@ function handleRequest($request)
         return array("success" => true, "message" => "library saved");
       }
       return array("success" => false, "message" => $result);
+    case "add_wishlist":
+      $result = doAddWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "added to wishlist");
+      }
+      return array("success" => false, "message" => $result);
+    case "remove_wishlist":
+      $result = doRemoveWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "removed from wishlist");
+      }
+      return array("success" => false, "message" => $result);
+    case "set_wishlist_notify":
+      $result = doSetWishlistNotify($request['sessionId'] ?? '', intval($request['appId'] ?? 0), intval($request['notify'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "notify updated");
+      }
+      return array("success" => false, "message" => $result);
+    case "get_wishlist":
+      $items = doGetWishlist($request['sessionId'] ?? '');
+      if ($items === false)
+      {
+        return array("success" => false, "message" => "session invalid");
+      }
+      return array("success" => true, "message" => "wishlist loaded", "items" => $items);
   }
   return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
