@@ -15,6 +15,7 @@ if (!isset($argv[1]))
   echo "  php databaseClient.php logout <token>".PHP_EOL;
   echo "  php databaseClient.php link_steam <token> <17-digit steamId>".PHP_EOL;
   echo "  php databaseClient.php unlink_steam <token>".PHP_EOL;
+  echo "  php databaseClient.php save_steam_profile <token> <steamId> <name> <avatarUrl> <profileUrl>".PHP_EOL;
   exit(1);
 }
 
@@ -29,6 +30,16 @@ else if ($argv[1] === 'link_steam')
 {
   $request['sessionId'] = $argv[2] ?? '';
   $request['steamId'] = $argv[3] ?? '';
+}
+else if ($argv[1] === 'save_steam_profile')
+{
+  $request['sessionId'] = $argv[2] ?? '';
+  $request['profile'] = array(
+    "steamId" => $argv[3] ?? '',
+    "name" => $argv[4] ?? '',
+    "avatar" => $argv[5] ?? '',
+    "profileUrl" => $argv[6] ?? ''
+  );
 }
 else
 {

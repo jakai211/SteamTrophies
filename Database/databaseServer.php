@@ -208,6 +208,56 @@ function doLinkSteam($sessionId,$steamId)
     return true;
 }
 
+// saves a steam profile reply from the DMZ (steamId, name, avatar, profileUrl)
+// returns true if it worked, or a message (string) saying why it didn't
+function saveSteamProfile($sessionId,$profile)
+{
+    $mydb = connectDB(); //connect
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    if (!is_array($profile))
+    {
+        return "Invalid profile data";
+    }
+
+    $steamId = $profile['steamId'] ?? '';
+    if (!preg_match('/^[0-9]{17}$/', $steamId))
+    {
+        return "Invalid Steam ID";
+    }
+
+    // only save for the steam account linked to this user, never trust the id in the request
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link || $link['steam_id'] !== $steamId)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    $name = $profile['name'] ?? '';
+    $avatar = $profile['avatar'] ?? '';
+    $profileUrl = $profile['profileUrl'] ?? '';
+    $now = time(); //epoch
+
+    // insert, or update the row if it already exists (link_steam made a stub row)
+    $stmt = $mydb->prepare("INSERT INTO steam_profiles (steam_id, display_name, avatar_url, profile_url, profile_updated_at)
+                            VALUES (?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE display_name = VALUES(display_name), avatar_url = VALUES(avatar_url),
+                            profile_url = VALUES(profile_url), profile_updated_at = VALUES(profile_updated_at)");
+    $stmt->bind_param("ssssi", $steamId, $name, $avatar, $profileUrl, $now);
+    $stmt->execute();
+
+    return true;
+}
+
 // removes the steam link, the website account stays
 function doUnlinkSteam($sessionId)
 {
@@ -288,6 +338,13 @@ function handleRequest($request)
         return array("success" => true, "message" => "steam unlinked");
       }
       return array("success" => false, "message" => "session invalid");
+    case "save_steam_profile": //profile is the raw get_profile reply from the DMZ
+      $result = saveSteamProfile($request['sessionId'] ?? '', $request['profile'] ?? array());
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "profile saved");
+      }
+      return array("success" => false, "message" => $result);
   }
   return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
