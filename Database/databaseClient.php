@@ -18,8 +18,10 @@ if (!isset($argv[1]))
   echo "  php databaseClient.php save_steam_profile <token> <steamId> <name> <avatarUrl> <profileUrl>".PHP_EOL;
   echo "  php databaseClient.php save_steam_library <token> <steamId> <games.json>".PHP_EOL;
   echo "  php databaseClient.php save_steam_recent <token> <steamId> <recent.json>".PHP_EOL;
+  echo "  php databaseClient.php save_steam_achievements <token> <steamId> <appId> <definitions.json> <player.json>".PHP_EOL;
   echo "  php databaseClient.php get_steam_profile <token>".PHP_EOL;
   echo "  php databaseClient.php get_steam_library <token>".PHP_EOL;
+  echo "  php databaseClient.php get_steam_achievements <token> <appId>".PHP_EOL;
   exit(1);
 }
 
@@ -64,6 +66,25 @@ else if ($argv[1] === 'save_steam_recent')
     "steamId" => $argv[3] ?? '',
     "games" => is_array($games) ? $games : array()
   );
+}
+else if ($argv[1] === 'save_steam_achievements')
+{
+  $definitionsFile = $argv[5] ?? '';
+  $playerFile = $argv[6] ?? '';
+  $definitions = is_file($definitionsFile) ? json_decode(file_get_contents($definitionsFile), true) : array();
+  $player = is_file($playerFile) ? json_decode(file_get_contents($playerFile), true) : array();
+  $request['sessionId'] = $argv[2] ?? '';
+  $request['achievements'] = array(
+    "steamId" => $argv[3] ?? '',
+    "appId" => $argv[4] ?? 0,
+    "definitions" => is_array($definitions) ? $definitions : array(),
+    "player" => is_array($player) ? $player : array()
+  );
+}
+else if ($argv[1] === 'get_steam_achievements')
+{
+  $request['sessionId'] = $argv[2] ?? '';
+  $request['appId'] = $argv[3] ?? 0;
 }
 else
 {

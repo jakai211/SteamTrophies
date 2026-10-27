@@ -71,6 +71,33 @@ CREATE TABLE steam_sync_state (
     PRIMARY KEY (request_type, scope_key)
 ) DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE achievement_definitions (
+    app_id INT UNSIGNED NOT NULL,
+    achievement_id VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
+    name VARCHAR(512) NOT NULL,
+    description TEXT NULL,
+    icon_url TEXT NULL,
+    icon_locked_url TEXT NULL,
+    hidden BOOLEAN NOT NULL DEFAULT 0,
+    global_percent DECIMAL(5,2) NULL,
+    definitions_updated_at BIGINT NULL,
+    global_percent_updated_at BIGINT NULL,
+    PRIMARY KEY (app_id, achievement_id),
+    FOREIGN KEY (app_id) REFERENCES games(app_id)
+) DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE player_achievements (
+    steam_id VARCHAR(20) NOT NULL,
+    app_id INT UNSIGNED NOT NULL,
+    achievement_id VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
+    unlocked BOOLEAN NOT NULL DEFAULT 0,
+    unlocked_at BIGINT NULL,
+    updated_at BIGINT NOT NULL,
+    PRIMARY KEY (steam_id, app_id, achievement_id),
+    FOREIGN KEY (steam_id) REFERENCES steam_profiles(steam_id),
+    FOREIGN KEY (app_id, achievement_id) REFERENCES achievement_definitions(app_id, achievement_id)
+) DEFAULT CHARSET=utf8mb4;
+
 CREATE USER 'appuser'@'localhost' IDENTIFIED BY 'Steam_App_2026';
 -- This password is a test and will be changed later when assigning VM roles
 GRANT SELECT, INSERT, UPDATE, DELETE ON steamtrophies.* TO 'appuser'@'localhost';

@@ -404,6 +404,117 @@ function saveSteamRecent($sessionId,$recent)
     return true;
 }
 
+// saves the achievements for one game from the DMZ: the game's definitions plus this player's progress
+// returns true if it worked, or a message (string) saying why it didn't
+function saveSteamAchievements($sessionId,$data)
+{
+    $mydb = connectDB(); //connect
+    $mydb->set_charset("utf8mb4"); //so names and descriptions save correctly
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    if (!is_array($data))
+    {
+        return "Invalid achievement data";
+    }
+
+    $steamId = $data['steamId'] ?? '';
+    $appId = (int)($data['appId'] ?? 0);
+    $definitions = $data['definitions'] ?? array(); //raw list from get_achievement_definitions
+    $player = $data['player'] ?? array(); //raw list from get_achievements
+
+    if (!preg_match('/^[0-9]{17}$/', $steamId))
+    {
+        return "Invalid Steam ID";
+    }
+
+    if ($appId <= 0)
+    {
+        return "Invalid app id";
+    }
+
+    if (!is_array($definitions) || !is_array($player) || count($definitions) + count($player) === 0)
+    {
+        return "No achievements to save";
+    }
+
+    // only save for the steam account linked to this user
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link || $link['steam_id'] !== $steamId)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    $now = time(); //epoch
+
+    // the game has to exist first (foreign key), if it's already there leave it alone
+    $stmt = $mydb->prepare("INSERT IGNORE INTO games (app_id, name) VALUES (?, '')");
+    $stmt->bind_param("i", $appId);
+    $stmt->execute();
+
+    // the game's achievements first (the player's rows point at these)
+    foreach ($definitions as $item)
+    {
+        $id = $item['id'] ?? '';
+        if ($id === '')
+        {
+            continue; //skip anything without an id
+        }
+        $name = $item['name'] ?? $id;
+        $description = $item['description'] ?? '';
+        $icon = $item['icon'] ?? '';
+        $iconLocked = $item['iconLocked'] ?? '';
+        $hidden = !empty($item['hidden']) ? 1 : 0;
+
+        $stmt = $mydb->prepare("INSERT INTO achievement_definitions (app_id, achievement_id, name, description, icon_url, icon_locked_url, hidden, definitions_updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), icon_url = VALUES(icon_url),
+                                icon_locked_url = VALUES(icon_locked_url), hidden = VALUES(hidden), definitions_updated_at = VALUES(definitions_updated_at)");
+        $stmt->bind_param("isssssii", $appId, $id, $name, $description, $icon, $iconLocked, $hidden, $now);
+        $stmt->execute();
+    }
+
+    // then this player's progress
+    foreach ($player as $item)
+    {
+        $id = $item['id'] ?? '';
+        if ($id === '')
+        {
+            continue; //skip anything without an id
+        }
+        $name = $item['name'] ?? $id;
+        $description = $item['description'] ?? '';
+        $unlocked = !empty($item['unlocked']) ? 1 : 0;
+        $unlockTime = (int)($item['unlockTime'] ?? 0);
+        $unlockedAt = ($unlockTime > 0) ? $unlockTime : null; //steam sends 0 for locked, save NULL instead
+        $percent = isset($item['globalPercent']) ? (float)$item['globalPercent'] : null; //missing stays NULL
+
+        // the global percent comes with the player's reply, so it goes on the achievement
+        // (this also makes sure the achievement row exists for the foreign key)
+        $stmt = $mydb->prepare("INSERT INTO achievement_definitions (app_id, achievement_id, name, description, global_percent, global_percent_updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE global_percent = VALUES(global_percent), global_percent_updated_at = VALUES(global_percent_updated_at)");
+        $stmt->bind_param("isssdi", $appId, $id, $name, $description, $percent, $now);
+        $stmt->execute();
+
+        $stmt = $mydb->prepare("INSERT INTO player_achievements (steam_id, app_id, achievement_id, unlocked, unlocked_at, updated_at)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE unlocked = VALUES(unlocked), unlocked_at = VALUES(unlocked_at), updated_at = VALUES(updated_at)");
+        $stmt->bind_param("sisiii", $steamId, $appId, $id, $unlocked, $unlockedAt, $now);
+        $stmt->execute();
+    }
+
+    return true;
+}
+
 // gets the saved steam profile for the logged in user
 // returns an array (steamId, name, avatar, profileUrl, updatedAt) if it worked, or a message (string) saying why it didn't
 function getSteamProfile($sessionId)
@@ -494,6 +605,82 @@ function getSteamLibrary($sessionId)
     }
 
     return $games;
+}
+
+// gets the saved achievements for one game for the logged in user
+// returns an array (total, unlocked, achievements) if it worked, or a message (string) saying why it didn't
+function getSteamAchievements($sessionId,$appId)
+{
+    $mydb = connectDB(); //connect
+    $mydb->set_charset("utf8mb4"); //so names and descriptions come back correctly
+
+    // has to be logged in
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $appId = (int)$appId;
+    if ($appId <= 0)
+    {
+        return "Invalid app id";
+    }
+
+    // the steam id comes from the user's link, never from the request
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if (!$link)
+    {
+        return "Steam account not linked to this user";
+    }
+
+    // this player's progress joined to the game's achievement info, unlocked ones first
+    $stmt = $mydb->prepare("SELECT ad.achievement_id, ad.name, ad.description, ad.icon_url, ad.icon_locked_url, ad.hidden,
+                            ad.global_percent, pa.unlocked, pa.unlocked_at
+                            FROM player_achievements pa
+                            JOIN achievement_definitions ad ON ad.app_id = pa.app_id AND ad.achievement_id = pa.achievement_id
+                            WHERE pa.steam_id = ? AND pa.app_id = ?
+                            ORDER BY pa.unlocked DESC, ad.name");
+    $stmt->bind_param("si", $link['steam_id'], $appId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $achievements = array();
+    $unlockedCount = 0;
+    while ($row = $result->fetch_assoc())
+    {
+        $isUnlocked = ($row['unlocked'] == 1);
+        $hiddenLocked = ($row['hidden'] == 1 && !$isUnlocked); //don't give away hidden achievements that are still locked
+
+        $achievements[] = array(
+            "id" => $row['achievement_id'],
+            "name" => $hiddenLocked ? "Hidden achievement" : $row['name'],
+            "description" => $hiddenLocked ? "Unlock to reveal." : ($row['description'] ?? ''),
+            "icon" => $hiddenLocked ? "" : ($row['icon_url'] ?? ''),
+            "iconLocked" => $hiddenLocked ? "" : ($row['icon_locked_url'] ?? ''),
+            "unlocked" => $isUnlocked,
+            "unlockTime" => (int)($row['unlocked_at'] ?? 0), //epoch, 0 if locked
+            "globalPercent" => ($row['global_percent'] === null) ? null : (float)$row['global_percent']
+        );
+        if ($isUnlocked)
+        {
+            $unlockedCount++;
+        }
+    }
+
+    if (count($achievements) === 0)
+    {
+        return "No saved achievements for this game";
+    }
+
+    return array(
+        "total" => count($achievements),
+        "unlocked" => $unlockedCount,
+        "achievements" => $achievements
+    );
 }
 
 // removes the steam link, the website account stays
@@ -597,6 +784,13 @@ function handleRequest($request)
         return array("success" => true, "message" => "recent playtime saved");
       }
       return array("success" => false, "message" => $result);
+    case "save_steam_achievements": //achievements holds the raw replies from get_achievement_definitions and get_achievements
+      $result = saveSteamAchievements($request['sessionId'] ?? '', $request['achievements'] ?? array());
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "achievements saved");
+      }
+      return array("success" => false, "message" => $result);
     case "get_steam_profile":
       $result = getSteamProfile($request['sessionId'] ?? '');
       if (is_array($result))
@@ -609,6 +803,19 @@ function handleRequest($request)
       if (is_array($result))
       {
         return array("success" => true, "message" => "library loaded", "games" => $result);
+      }
+      return array("success" => false, "message" => $result);
+    case "get_steam_achievements":
+      $result = getSteamAchievements($request['sessionId'] ?? '', $request['appId'] ?? 0);
+      if (is_array($result))
+      {
+        return array(
+          "success" => true,
+          "message" => "achievements loaded",
+          "total" => $result['total'],
+          "unlocked" => $result['unlocked'],
+          "achievements" => $result['achievements']
+        );
       }
       return array("success" => false, "message" => $result);
   }
