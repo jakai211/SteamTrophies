@@ -889,7 +889,20 @@ function handleRequest($request)
         );
       }
       return array("success" => false, "message" => $result);
-=======
+    case "get_steam_profile": //readd because mege conflicts
+      $result = getSteamProfile($request['sessionId'] ?? ''); 
+      if (is_array($result))
+      {
+        return array("success" => true, "message" => "profile loaded", "profile" => $result);
+      }
+      return array("success" => false, "message" => $result);
+    case "get_steam_library":
+      $result = getSteamLibrary($request['sessionId'] ?? '');
+      if (is_array($result))
+      {
+        return array("success" => true, "message" => "library loaded", "games" => $result);
+      }
+      return array("success" => false, "message" => $result);
     case "add_wishlist":
       $result = doAddWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
       if ($result === true)
@@ -918,8 +931,7 @@ function handleRequest($request)
         return array("success" => false, "message" => "session invalid");
       }
       return array("success" => true, "message" => "wishlist loaded", "items" => $items);
->>>>>>> origin/wishlist
-  }
+      }
   return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
 
