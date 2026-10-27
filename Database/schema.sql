@@ -71,6 +71,7 @@ CREATE TABLE steam_sync_state (
     PRIMARY KEY (request_type, scope_key)
 ) DEFAULT CHARSET=utf8mb4;
 
+<<<<<<< HEAD
 CREATE TABLE achievement_definitions (
     app_id INT UNSIGNED NOT NULL,
     achievement_id VARCHAR(255) COLLATE utf8mb4_bin NOT NULL,
@@ -98,6 +99,18 @@ CREATE TABLE player_achievements (
     FOREIGN KEY (app_id, achievement_id) REFERENCES achievement_definitions(app_id, achievement_id)
 ) DEFAULT CHARSET=utf8mb4;
 
+=======
+CREATE TABLE wishlist_items (
+    user_id INT NOT NULL,
+    app_id INT UNSIGNED NOT NULL,
+    added_at BIGINT NOT NULL DEFAULT (UNIX_TIMESTAMP()),
+    notify BOOLEAN NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (user_id, app_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (app_id) REFERENCES games(app_id)
+) DEFAULT CHARSET=utf8mb4;
+
+>>>>>>> origin/wishlist
 CREATE USER 'appuser'@'localhost' IDENTIFIED BY 'Steam_App_2026';
 -- This password is a test and will be changed later when assigning VM roles
 GRANT SELECT, INSERT, UPDATE, DELETE ON steamtrophies.* TO 'appuser'@'localhost';

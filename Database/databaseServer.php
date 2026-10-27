@@ -701,6 +701,90 @@ function doUnlinkSteam($sessionId)
     return true;
 }
 
+// adds a game to the user's wishlist
+function doAddWishlist($sessionId, $appId)
+{
+    $mydb = connectDB(); 
+    $userId = getUserIdFromSession($sessionId); //finds the user from their session
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    //makes sure the game is in our games table first
+    $stmt = $mydb->prepare("SELECT app_id FROM games WHERE app_id = ?");
+    $stmt->bind_param("i", $appId);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows == 0)
+    {
+        return "game not found";
+    }
+
+    //INSERT IGNORE so adding the same game twice doesn't cause an error
+    $stmt = $mydb->prepare("INSERT IGNORE INTO wishlist_items (user_id, app_id) VALUES (?, ?)");
+    $stmt->bind_param("ii", $userId, $appId);
+    $stmt->execute();
+
+    return true;
+}
+
+// removes a game from the user's wishlist
+function doRemoveWishlist($sessionId, $appId)
+{
+    $mydb = connectDB(); 
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $stmt = $mydb->prepare("DELETE FROM wishlist_items WHERE user_id = ? AND app_id = ?");
+    $stmt->bind_param("ii", $userId, $appId);
+    $stmt->execute();
+
+    return true;
+}
+
+//turns notifications on (1) or off (0) for one game
+function doSetWishlistNotify($sessionId, $appId, $notify)
+{
+    $mydb = connectDB(); 
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $stmt = $mydb->prepare("UPDATE wishlist_items SET notify = ? WHERE user_id = ? AND app_id = ?");
+    $stmt->bind_param("iii", $notify, $userId, $appId);
+    $stmt->execute();
+
+    return true;
+}
+
+// gets all the games on the user's wishlist
+function doGetWishlist($sessionId)
+{
+    $mydb = connectDB(); 
+    $mydb->set_charset("utf8mb4"); 
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return false;
+    }
+
+    //join with games so we get the game name too
+    $stmt = $mydb->prepare("SELECT wishlist_items.app_id, games.name, wishlist_items.added_at, wishlist_items.notify
+                            FROM wishlist_items
+                            JOIN games ON games.app_id = wishlist_items.app_id
+                            WHERE wishlist_items.user_id = ?
+                            ORDER BY wishlist_items.added_at DESC");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC); 
+}
+
 function handleRequest($request)
 {
   echo "received request".PHP_EOL;
@@ -777,6 +861,7 @@ function handleRequest($request)
         return array("success" => true, "message" => "library saved");
       }
       return array("success" => false, "message" => $result);
+
     case "save_steam_recent": //recent is the raw get_recent_playtime reply from the DMZ
       $result = saveSteamRecent($request['sessionId'] ?? '', $request['recent'] ?? array());
       if ($result === true)
@@ -789,20 +874,6 @@ function handleRequest($request)
       if ($result === true)
       {
         return array("success" => true, "message" => "achievements saved");
-      }
-      return array("success" => false, "message" => $result);
-    case "get_steam_profile":
-      $result = getSteamProfile($request['sessionId'] ?? '');
-      if (is_array($result))
-      {
-        return array("success" => true, "message" => "profile loaded", "profile" => $result);
-      }
-      return array("success" => false, "message" => $result);
-    case "get_steam_library":
-      $result = getSteamLibrary($request['sessionId'] ?? '');
-      if (is_array($result))
-      {
-        return array("success" => true, "message" => "library loaded", "games" => $result);
       }
       return array("success" => false, "message" => $result);
     case "get_steam_achievements":
@@ -818,6 +889,36 @@ function handleRequest($request)
         );
       }
       return array("success" => false, "message" => $result);
+=======
+    case "add_wishlist":
+      $result = doAddWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "added to wishlist");
+      }
+      return array("success" => false, "message" => $result);
+    case "remove_wishlist":
+      $result = doRemoveWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "removed from wishlist");
+      }
+      return array("success" => false, "message" => $result);
+    case "set_wishlist_notify":
+      $result = doSetWishlistNotify($request['sessionId'] ?? '', intval($request['appId'] ?? 0), intval($request['notify'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "notify updated");
+      }
+      return array("success" => false, "message" => $result);
+    case "get_wishlist":
+      $items = doGetWishlist($request['sessionId'] ?? '');
+      if ($items === false)
+      {
+        return array("success" => false, "message" => "session invalid");
+      }
+      return array("success" => true, "message" => "wishlist loaded", "items" => $items);
+>>>>>>> origin/wishlist
   }
   return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
