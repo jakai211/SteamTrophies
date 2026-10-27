@@ -28,6 +28,11 @@ if ($type == "register")
     {
         exit("Passwords do not match.");
     }
+
+    if (!isset($_POST['first_name'], $_POST['last_name'], $_POST['email']))
+    {
+        exit("Missing required information.");
+    }
 }
 
 $client = new rabbitMQClient("WebRabbitMQ.ini", "testServer");
@@ -36,6 +41,13 @@ $request = array();
 $request['type'] = $type;
 $request['username'] = $_POST['username'];
 $request['password'] = $_POST['password'];
+
+if ($type == "register")
+{
+    $request['first_name'] = $_POST['first_name'];
+    $request['last_name'] = $_POST['last_name'];
+    $request['email'] = $_POST['email'];
+}
 
 $response = $client->send_request($request);
 
