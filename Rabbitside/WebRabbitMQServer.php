@@ -15,6 +15,8 @@ function requestProcessor($request) {
         case "login":
         case "register":
         case "validate_session":
+        case "link_steam":
+        case "unlink_steam":
         case "logout":
             $client = new rabbitMQClient ("databaseRabbitMQ.ini", "databaseServer");
 
