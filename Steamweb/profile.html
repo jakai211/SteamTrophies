@@ -290,57 +290,18 @@
   <div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded bg-raised border border-accent text-white shadow-xl"></div>
 
   <script>
-    //FAKE DATA for now. The names match what the database sends back:
-    //   get_steam_profile      -> profile
-    //   get_steam_library      -> games
-    //   get_steam_achievements -> achievements (one call per game)
-    //When you guys finish the backend, replace these with fetch() calls
-    let siteUsername = "valkyrie_trophies";
-
-    let profile = {
-      steamId: "76561198028914022",
-      name: "ValkyrieAce",
-      avatar: "",
-      profileUrl: "https://steamcommunity.com/profiles/76561198028914022",
-      updatedAt: Math.floor(Date.now() / 1000) - 12 * 60
-    };
-
-    let games = [
-      { appId: 1245620, name: "ELDEN RING",            hoursPlayed: 214.5, minutesLastTwoWeeks: 320, unlocked: 42, total: 42 },
-      { appId: 1145360, name: "Hades",                 hoursPlayed: 96.2,  minutesLastTwoWeeks: 0,   unlocked: 49, total: 49 },
-      { appId: 632360,  name: "Risk of Rain 2",        hoursPlayed: 141.0, minutesLastTwoWeeks: 95,  unlocked: 61, total: 64 },
-      { appId: 367520,  name: "Hollow Knight",         hoursPlayed: 88.4,  minutesLastTwoWeeks: 0,   unlocked: 63, total: 63 },
-      { appId: 374320,  name: "DARK SOULS III",        hoursPlayed: 148.5, minutesLastTwoWeeks: 0,   unlocked: 43, total: 43 },
-      { appId: 1888160, name: "ARMORED CORE VI",       hoursPlayed: 74.2,  minutesLastTwoWeeks: 210, unlocked: 30, total: 30 },
-      { appId: 413150,  name: "Stardew Valley",        hoursPlayed: 201.7, minutesLastTwoWeeks: 0,   unlocked: 33, total: 40 },
-      { appId: 1086940, name: "Baldur's Gate 3",       hoursPlayed: 132.0, minutesLastTwoWeeks: 600, unlocked: 31, total: 54 },
-      { appId: 730,     name: "Counter-Strike 2",      hoursPlayed: 410.3, minutesLastTwoWeeks: 0,   unlocked: 0,  total: 0  },
-      { appId: 2379780, name: "Balatro",               hoursPlayed: 12.5,  minutesLastTwoWeeks: 0,   unlocked: 0,  total: 30 }
-    ];
-
-    const DAY = 24 * 60 * 60;
-    const now = Math.floor(Date.now() / 1000);
-    let achievements = [
-      { gameName: "ELDEN RING",     appId: 1245620, name: "Age of the Stars",     description: "Achieved the Age of the Stars ending.",                  globalPercent: 0.7,  unlockTime: now - 2 * DAY },
-      { gameName: "Hades",          appId: 1145360, name: "Skelly's Final Praise", description: "Earned the second of Skelly's prizes through 32 Heat.", globalPercent: 0.9,  unlockTime: now - 40 * DAY },
-      { gameName: "Risk of Rain 2", appId: 632360,  name: "The Long Road",        description: "Complete 20 stages in a single run.",                    globalPercent: 1.4,  unlockTime: now - 1 * DAY },
-      { gameName: "Hollow Knight",  appId: 367520,  name: "Embrace the Void",     description: "Ascend the Pantheon of Hallownest.",                     globalPercent: 3.2,  unlockTime: now - 75 * DAY },
-      { gameName: "ARMORED CORE VI",appId: 1888160, name: "Alea Iacta Est",       description: "Reach the Alea Iacta Est ending.",                       globalPercent: 12.5, unlockTime: now },
-      { gameName: "Baldur's Gate 3",appId: 1086940, name: "Roleplayer",           description: "Long rest 25 times.",                                    globalPercent: 28.0, unlockTime: now - 3 * DAY },
-      { gameName: "Baldur's Gate 3",appId: 1086940, name: "Descent From Avernus",  description: "Enter the city of Baldur's Gate.",                       globalPercent: 44.6, unlockTime: now - 4 * DAY },
-      { gameName: "Stardew Valley", appId: 413150,  name: "Greenhorn",            description: "Earn 15,000g.",                                          globalPercent: 71.2, unlockTime: now - 120 * DAY },
-      { gameName: "Hades",          appId: 1145360, name: "Escaped Tartarus",     description: "Clear Tartarus.",                                        globalPercent: 82.3, unlockTime: now - 150 * DAY },
-      { gameName: "ELDEN RING",     appId: 1245620, name: "Shardbearer Margit",   description: "Defeat Margit, the Fell Omen.",                          globalPercent: 63.9, unlockTime: now - 25 * DAY }
-    ];
+    // the data comes from profileData.php (filled in by loadProfile below)
+    let siteUsername = "";
+    let profile = { steamId: "", name: "", avatar: "", profileUrl: "#", updatedAt: null };
+    let games = [];
+    let achievements = [];
 
     // helpers
 
-    // Steam's banner picture for a game
     function gameImage(appId) {
       return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg";
     }
 
-    //makes text safe to put inside HTML 
     function esc(text) {
       const div = document.createElement("div");
       div.textContent = text;
@@ -390,8 +351,13 @@
       document.getElementById("steamId").textContent = profile.steamId;
       document.getElementById("profileLink").href = profile.profileUrl;
 
-      const minutesAgo = Math.round((Date.now() / 1000 - profile.updatedAt) / 60);
-      document.getElementById("lastSynced").textContent = "Last synced: " + minutesAgo + " mins ago";
+      //updatedAt will be empty after the first sync
+      if (!profile.updatedAt) {
+        document.getElementById("lastSynced").textContent = "Not synced yet";
+      } else {
+        const minutesAgo = Math.round((Date.now() / 1000 - profile.updatedAt) / 60);
+        document.getElementById("lastSynced").textContent = "Last synced: " + minutesAgo + " mins ago";
+      }
     }
 
     function renderTrophyCounts() {
@@ -420,7 +386,6 @@
       document.getElementById("silverCount").textContent = silver;
       document.getElementById("bronzeCount").textContent = bronze;
 
-      // the bars show each tier's share
       document.getElementById("platinumBar").style.width = (gamesWithAchievements ? platinum / gamesWithAchievements * 100 : 0) + "%";
       document.getElementById("goldBar").style.width = (all ? gold / all * 100 : 0) + "%";
       document.getElementById("silverBar").style.width = (all ? silver / all * 100 : 0) + "%";
@@ -454,7 +419,7 @@
     }
 
     function renderRarest() {
-      // copy the list, sort rarest first, keep the top 3
+      //copies the list and sorts rarest first, keeps the top 3
       const rarest = achievements.slice().sort(function (a, b) { return a.globalPercent - b.globalPercent; }).slice(0, 3);
 
       let html = "";
@@ -607,21 +572,28 @@
       document.getElementById("libraryEmpty").classList.toggle("hidden", list.length > 0);
     }
 
-    //buttons
     function toggleUserMenu() {
       document.getElementById("userMenu").classList.toggle("hidden");
     }
 
-    function syncWithSteam() {
+    //asks steamSync.php to get the newest data from steam and saves it
+    async function syncWithSteam() {
       const icon = document.getElementById("syncIcon");
       icon.classList.add("animate-spin");
-      //TODO: call steamSync.php here when it's ready, then reload the data
-      setTimeout(function () {
-        icon.classList.remove("animate-spin");
-        profile.updatedAt = Math.floor(Date.now() / 1000);
-        renderHeader();
-        showToast("Profile updated");
-      }, 1200);
+      showToast("Syncing with Steam, this can take a minute...");
+
+      try {
+        const response = await fetch("steamSync.php", { method: "POST" });
+        const result = await response.json();
+        showToast(result.message);
+        if (result.success) {
+          await loadProfile(); 
+        }
+      } catch (error) {
+        showToast("Sync failed, try again.");
+      }
+
+      icon.classList.remove("animate-spin");
     }
 
     function openUnlinkModal() {
@@ -632,28 +604,69 @@
       document.getElementById("unlinkModal").classList.add("hidden");
     }
 
-    function unlinkSteam() {
+    // asks unlinkSteam.php to remove the steam link
+    async function unlinkSteam() {
       closeUnlinkModal();
-      document.getElementById("linked").classList.add("hidden");
-      document.getElementById("notLinked").classList.remove("hidden");
-      showToast("Steam unlinked");
+      const response = await fetch("unlinkSteam.php", { method: "POST" });
+      const result = await response.json();
+
+      if (result.success) {
+        document.getElementById("linked").classList.add("hidden");
+        document.getElementById("notLinked").classList.remove("hidden");
+        showToast("Steam unlinked");
+      } else {
+        showToast("Could not unlink Steam.");
+      }
     }
 
     document.addEventListener("keydown", function (event) {
       if (event.key == "Escape") closeUnlinkModal();
     });
 
-    //after Sign in through Steam, steamCallback.php sends us here with ?steam=linked
+    // gets the real data from profileData.php and draws the page
+    async function loadProfile() {
+      const response = await fetch("profileData.php");
+      const result = await response.json();
+
+      if (!result.loggedIn) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      siteUsername = result.username;
+      document.getElementById("navName").textContent = siteUsername;
+
+      if (!result.linked) {
+        document.getElementById("linked").classList.add("hidden");
+        document.getElementById("notLinked").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("notLinked").classList.add("hidden");
+      document.getElementById("linked").classList.remove("hidden");
+
+      profile = result.profile;
+      games = result.games;
+      achievements = result.achievements;
+
+      renderHeader();
+      renderTrophyCounts();
+      renderHallOfFame();
+      renderRarest();
+      renderAnalytics();
+      renderLibrary();
+
+      if (games.length == 0) {
+        showToast("Click Sync with Steam to load your games.");
+      }
+    }
+
+    //after sign in through steam, steamCallback.php sends us here with ?steam=linked
     const params = new URLSearchParams(window.location.search);
-    if (params.get("steam") == "linked") showToast("Steam account linked!");
+    if (params.get("steam") == "linked") showToast("Steam account linked! Click Sync with Steam.");
     if (params.get("steam") == "link_failed") showToast("Could not link that Steam account.");
 
-    renderHeader();
-    renderTrophyCounts();
-    renderHallOfFame();
-    renderRarest();
-    renderAnalytics();
-    renderLibrary();
+    loadProfile();
   </script>
 </body>
 </html>
