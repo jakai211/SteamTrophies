@@ -1,45 +1,15 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-
-    <title>Login</title>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SteamTrophies - Sign In</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="tailwind-config.js"></script>
-
 </head>
 <body class="min-h-screen flex flex-col bg-page text-text font-sans"
       style="background-image: radial-gradient(ellipse at top, #24405a 0%, #1B2838 45%, #141c26 100%);">
-
-
-	<h1>Login In</h1>
-
-	<form action="WebRabbitMQClient.php" method="POST">
-	<input type="hidden" name="type" value="login">
-
-    		<label for="username" >Username: </label>
-    		<input type="text" id="username" name="username" required>
-
-    		<br><br>
-
-    		<label for="password">Password:</label>
-    		<input type="password" id="password"  name="password" required>
-
-    		<br><br>
-
-   		<button type="submit">Login</button>
-
-</form>
-
-<br>
-
-<a href="register.html">Create an account</a>
-
-
 
   <header class="text-center pt-12">
     <div class="flex items-center justify-center gap-3">
@@ -234,6 +204,5 @@
       document.getElementById("successBanner").classList.remove("hidden");
     }
   </script>
-
 </body>
 </html>
