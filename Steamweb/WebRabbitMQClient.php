@@ -66,7 +66,7 @@ if ($type == "login")
                         $_SERVER['HTTPS'] !== "off"
         ));
 
-        header("Location: welcome.html");
+        header("Location: profile.html");
         exit();
     }
 
