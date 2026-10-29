@@ -29,6 +29,9 @@ function requestProcessor($request) {
         case "save_steam_recent":
         case "save_steam_achievements":
         case "browse_games":
+        case "save_review":
+        case "delete_review":
+        case "get_reviews":
         case "logout":
             $client = new rabbitMQClient ("databaseRabbitMQ.ini", "databaseServer");
 
