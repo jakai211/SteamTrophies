@@ -392,6 +392,66 @@ function verifySteamLogin($params)
     return array("returnCode" => '1', "steamId" => $steamId);
 }
 
+// Request type "get_steam_reviews": Steam's review score and the most helpful reviews for one game.
+// No player SteamID needed. Used by the game page (Steamweb/gameData.php).
+function getSteamReviews($appId)
+{
+    $appId = filter_var($appId, FILTER_VALIDATE_INT);
+    if ($appId === false || $appId <= 0)
+    {
+        return array("returnCode" => '0', "message" => "Invalid appId");
+    }
+
+    // filter 0 = most helpful, day_range 0 = no date limit, purchase_type 1 = all purchases
+    $input = array(
+        "appid"            => $appId,
+        "filter"           => 0,
+        "day_range"        => 0,
+        "review_type"      => 0,
+        "purchase_type"    => 1,
+        "num_per_page"     => 20,
+        "display_language" => "english"
+    );
+    $url = "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/?" . http_build_query(array(
+        "input_json" => json_encode($input)
+    ));
+    $data = steamGet($url);
+    if (isset($data['response']) && is_array($data['response']))
+    {
+        $data = $data['response'];
+    }
+    if (!$data || !isset($data['query_summary']))
+    {
+        return array("returnCode" => '0', "message" => "Could not load reviews");
+    }
+
+    $sum      = $data['query_summary'];
+    $positive = (int)($sum['total_positive'] ?? 0);
+    $negative = (int)($sum['total_negative'] ?? 0);
+
+    $reviews = array();
+    foreach (($data['reviews'] ?? array()) as $r)
+    {
+        $minutes = (int)($r['author']['playtime_forever'] ?? $r['author']['playtime_at_review'] ?? 0);
+        $reviews[] = array(
+            "recommended" => !empty($r['voted_up']),
+            "text"        => (preg_match('/^.{0,1000}/su', $r['review'] ?? "", $m) ? $m[0] : ""),
+            "hoursPlayed" => round($minutes / 60, 1),
+            "postedAt"    => (int)($r['timestamp_created'] ?? 0),
+            "votesUp"     => (int)($r['votes_up'] ?? 0)
+        );
+    }
+
+    return array(
+        "returnCode" => '1',
+        "appId"      => $appId,
+        "scoreText"  => $sum['review_score_desc'] ?? "",
+        "positive"   => $positive,
+        "total"      => (int)($sum['total_reviews'] ?? ($positive + $negative)),
+        "reviews"    => $reviews
+    );
+}
+
 // RabbitMQ calls this for every message that arrives.
 
 // Global achievement definitions and rarity for one game.
@@ -487,6 +547,9 @@ function requestProcessor($request)
 
             case "verify_steam_login":
                 return verifySteamLogin($request['params'] ?? array());
+
+            case "get_steam_reviews":
+                return getSteamReviews($request['appId'] ?? 0);
 
             case "get_recent_playtime":
                 return getRecentPlaytime($request['user'] ?? "");

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SteamTrophies - Browse Games</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind-config.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-page text-text font-sans">
+
+  <nav class="bg-nav border-b border-raised">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
+      <a href="profile.html" class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-md bg-raised flex items-center justify-center">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-white">Steam<span class="text-accent font-normal">Trophies</span></span>
+      </a>
+
+      <div class="flex items-center gap-7 text-text">
+        <a href="profile.html" class="hover:text-white">Home</a>
+        <a href="browse.html" class="text-white font-semibold">Browse Games</a>
+        <a href="wishlist.html" class="hover:text-white">Wishlist</a>
+        <a href="recommended.html" class="hover:text-white">Recommended</a>
+      </div>
+
+      <div class="ml-auto flex items-center gap-6">
+        <div class="relative">
+          <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-white">
+            <span id="navName">User</span>
+            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="hidden absolute right-0 mt-2 w-40 rounded bg-panel border border-raised shadow-xl z-20">
+            <a href="profile.html" class="block px-4 py-2 hover:bg-raised">Profile</a>
+            <form action="logout.php" method="POST">
+              <button type="submit" class="w-full text-left px-4 py-2 text-danger hover:bg-raised">Log out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-6 py-12 space-y-6">
+
+    <section class="bg-panel border border-raised rounded-lg p-6">
+      <h1 class="text-3xl font-bold text-white">Browse Games</h1>
+      <p class="mt-2 text-sm text-muted">Search every game in our catalog. Turn on "Only games I own" to see your library.</p>
+    </section>
+
+    <section class="bg-panel border border-raised rounded-lg p-4 flex items-center gap-4">
+      <input id="search" onkeydown="searchKey(event)" type="text" placeholder="Search by game name..."
+             class="flex-1 px-4 py-2 rounded bg-page border border-raised text-white placeholder-text/70 focus:outline-none focus:border-accent">
+      <button onclick="newSearch()" class="px-5 py-2 rounded font-semibold text-white bg-gradient-to-r from-accentdk to-accent hover:opacity-90">Search</button>
+
+      <div class="flex gap-1 p-1 rounded bg-page border border-raised">
+        <button id="filterAll" onclick="setOwned(0)" class="px-3 py-1 rounded text-sm bg-raised text-white">All games</button>
+        <button id="filterOwned" onclick="setOwned(1)" class="px-3 py-1 rounded text-sm text-muted hover:text-white">Only games I own</button>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1 rounded bg-page border border-raised">
+        <span class="font-mono text-xs text-muted">SORT:</span>
+        <select id="sort" onchange="newSearch()" class="px-2 py-1 rounded bg-panel border border-raised text-sm text-white">
+          <option value="name">Name (A-Z)</option>
+          <option value="played">Most played</option>
+        </select>
+      </div>
+    </section>
+
+    <p id="resultText" class="text-sm text-muted">Loading games...</p>
+
+    <section id="gameGrid" class="grid grid-cols-4 gap-5"></section>
+
+    <section id="emptyBox" class="hidden bg-panel border border-raised rounded-lg p-10 text-center">
+      <p id="emptyText" class="text-lg text-white">No games found.</p>
+    </section>
+
+    <section id="pager" class="hidden flex items-center justify-center gap-4">
+      <button id="prevButton" onclick="changePage(-1)" class="px-4 py-2 rounded bg-panel border border-raised text-white hover:border-accent">&larr; Previous</button>
+      <span id="pageText" class="text-sm text-muted">Page 1 of 1</span>
+      <button id="nextButton" onclick="changePage(1)" class="px-4 py-2 rounded bg-panel border border-raised text-white hover:border-accent">Next &rarr;</button>
+    </section>
+  </main>
+
+  <footer class="border-t border-raised bg-nav">
+    <div class="max-w-7xl mx-auto px-6 py-6 text-sm text-muted">
+      SteamTrophies is a student project powered by the Steam Web API. Not affiliated with Valve Corporation.
+    </div>
+  </footer>
+
+  <div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded bg-raised border border-accent text-white shadow-xl"></div>
+
+  <script>
+    let games = [];
+
+    let wishlistIds = [];
+
+    let page = 1;
+    let totalPages = 1;
+    let ownedOnly = 0;
+
+    function gameImage(appId) {
+      return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg";
+    }
+    function esc(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      setTimeout(function () { toast.classList.add("hidden"); }, 2500);
+    }
+    function toggleUserMenu() {
+      document.getElementById("userMenu").classList.toggle("hidden");
+    }
+
+    function searchKey(event) {
+      if (event.key == "Enter") {
+        newSearch();
+      }
+    }
+    function newSearch() {
+      page = 1;
+      loadGames();
+    }
+    function setOwned(value) {
+      ownedOnly = value;
+
+      const active = "px-3 py-1 rounded text-sm bg-raised text-white";
+      const normal = "px-3 py-1 rounded text-sm text-muted hover:text-white";
+      if (ownedOnly == 1) {
+        document.getElementById("filterOwned").className = active;
+        document.getElementById("filterAll").className = normal;
+      } else {
+        document.getElementById("filterAll").className = active;
+        document.getElementById("filterOwned").className = normal;
+      }
+
+      newSearch();
+    }
+    function changePage(amount) {
+      page = page + amount;
+      if (page < 1) {
+        page = 1;
+      }
+      if (page > totalPages) {
+        page = totalPages;
+      }
+      loadGames();
+      window.scrollTo(0, 0);
+    }
+
+    async function loadGames() {
+      const search = document.getElementById("search").value;
+      const sort = document.getElementById("sort").value;
+
+      const url = "browse.php?search=" + encodeURIComponent(search) +
+                  "&owned=" + ownedOnly +
+                  "&sort=" + sort +
+                  "&page=" + page;
+
+      document.getElementById("resultText").textContent = "Loading games...";
+
+      try {
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (result.message == "not logged in" || result.message == "session invalid") {
+          window.location.href = "login.html";
+          return;
+        }
+
+        if (!result.success) {
+          games = [];
+          document.getElementById("resultText").textContent = "";
+          document.getElementById("emptyText").textContent = "Could not load games right now. Try again later.";
+          renderGames();
+          return;
+        }
+
+        games = result.games;
+        totalPages = Math.ceil(result.total / result.perPage);
+        if (totalPages < 1) {
+          totalPages = 1;
+        }
+
+        if (result.total == 0) {
+          document.getElementById("resultText").textContent = "";
+        } else {
+          const first = (page - 1) * result.perPage + 1;
+          const last = first + games.length - 1;
+          document.getElementById("resultText").textContent = "Showing " + first + "-" + last + " of " + result.total + " games";
+        }
+
+        if (ownedOnly == 1) {
+          document.getElementById("emptyText").textContent = "No owned games found. Link Steam and click Sync on your profile.";
+        } else {
+          document.getElementById("emptyText").textContent = "No games found.";
+        }
+
+        renderGames();
+      } catch (error) {
+        games = [];
+        document.getElementById("resultText").textContent = "";
+        document.getElementById("emptyText").textContent = "Could not load games right now. Try again later.";
+        renderGames();
+      }
+    }
+
+    function renderGames() {
+      let html = "";
+
+      for (const game of games) {
+        // owned badge
+        let badge = '<span class="px-2 py-0.5 rounded bg-raised text-xs text-muted">Not owned</span>';
+        if (game.owned) {
+          badge = '<span class="px-2 py-0.5 rounded bg-success/20 text-xs text-success">Owned &middot; ' + game.hoursPlayed + ' hrs</span>';
+        }
+
+        let wishButton = '<button onclick="toggleWishlist(' + game.appId + ')" class="px-3 py-1 rounded bg-raised text-sm text-white hover:bg-accentdk">+ Wishlist</button>';
+        if (wishlistIds.includes(game.appId)) {
+          wishButton = '<button onclick="toggleWishlist(' + game.appId + ')" class="px-3 py-1 rounded bg-accentdk text-sm text-white">&#10003; On Wishlist</button>';
+        }
+
+        html += `
+          <div class="bg-panel border border-raised rounded-lg overflow-hidden hover:border-accent">
+            <a href="game.html?appId=${game.appId}">
+              <img src="${gameImage(game.appId)}" alt="" class="w-full h-32 object-cover bg-raised"
+                   onerror="this.style.visibility='hidden'">
+            </a>
+            <div class="p-4">
+              <a href="game.html?appId=${game.appId}" class="block font-semibold text-white hover:text-accent truncate" title="${esc(game.name)}">${esc(game.name)}</a>
+              <div class="mt-2">${badge}</div>
+              <div class="mt-4 flex items-center justify-between">
+                <a href="game.html?appId=${game.appId}" class="text-sm text-accent hover:text-white">View &rarr;</a>
+                ${wishButton}
+              </div>
+            </div>
+          </div>`;
+      }
+
+      document.getElementById("gameGrid").innerHTML = html;
+
+      if (games.length == 0) {
+        document.getElementById("emptyBox").classList.remove("hidden");
+      } else {
+        document.getElementById("emptyBox").classList.add("hidden");
+      }
+      if (totalPages > 1) {
+        document.getElementById("pager").classList.remove("hidden");
+      } else {
+        document.getElementById("pager").classList.add("hidden");
+      }
+      document.getElementById("pageText").textContent = "Page " + page + " of " + totalPages;
+      document.getElementById("prevButton").disabled = (page == 1);
+      document.getElementById("nextButton").disabled = (page == totalPages);
+    }
+    async function loadWishlist() {
+      try {
+        const response = await fetch("wishlist.php");
+        const result = await response.json();
+        if (result.success) {
+          wishlistIds = [];
+          for (const item of result.items) {
+            wishlistIds.push(Number(item.app_id));
+          }
+        }
+      } catch (error) {
+      }
+    }
+
+    // adds or removes a game from the wishlist
+    async function toggleWishlist(appId) {
+      let action = "add";
+      if (wishlistIds.includes(appId)) {
+        action = "remove";
+      }
+
+      const response = await fetch("wishlist.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "action=" + action + "&appId=" + appId
+      });
+      const result = await response.json();
+
+      if (!result.success) {
+        showToast("Could not update your wishlist.");
+        return;
+      }
+
+      if (action == "add") {
+        wishlistIds.push(appId);
+        showToast("Added to your wishlist.");
+      } else {
+        wishlistIds = wishlistIds.filter(function (id) { return id != appId; });
+        showToast("Removed from your wishlist.");
+      }
+      renderGames();
+    }
+
+    //shows your username in the navbar
+    async function loadUser() {
+      try {
+        const response = await fetch("validateToken.php");
+        const result = await response.json();
+        if (!result.valid) {
+          window.location.href = "login.html";
+          return;
+        }
+        document.getElementById("navName").textContent = result.username;
+      } catch (error) {
+      }
+    }
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("search")) {
+      document.getElementById("search").value = params.get("search");
+    }
+
+    async function start() {
+      await loadUser();
+      await loadWishlist();
+      await loadGames();
+    }
+    start();
+  </script>
+</body>
+</html>

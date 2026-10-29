@@ -33,6 +33,12 @@ else if ($argv[1] == 'achievements')
     $request['type'] = 'get_achievements';
     $request['appId'] = isset($argv[3]) ? $argv[3] : 440;   // 440 = Team Fortress 2
 }
+else if ($argv[1] == 'reviews')
+{
+    // php steamTestClient.php reviews <appId>
+    $request['type'] = 'get_steam_reviews';
+    $request['appId'] = $argv[2];
+}
 else
 {
     echo "Unknown command" . PHP_EOL;
