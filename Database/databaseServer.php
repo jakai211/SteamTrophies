@@ -4,6 +4,7 @@ require_once('path.inc');
 require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('databaseConnection.php');  // gives us connectDB() that will be used for most of the functions
+require_once('globalCatalog.php');
 
 
 function doLogin($username,$password)
@@ -931,7 +932,15 @@ function handleRequest($request)
         return array("success" => false, "message" => "session invalid");
       }
       return array("success" => true, "message" => "wishlist loaded", "items" => $items);
-      }
+
+    case "save_game_catalog":
+    case "get_global_games_due":
+    case "mark_global_game_started":
+    case "mark_global_game_failed":
+    case "save_global_game_data":
+      return handleGlobalCatalog($request);
+  }
+
   return array("success" => false, "message" => "Unknown request type"); //every reply now has success and message
 }
 
