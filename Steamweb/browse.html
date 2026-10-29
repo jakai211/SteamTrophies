@@ -223,7 +223,7 @@
         }
 
         let wishButton = '<button onclick="toggleWishlist(' + game.appId + ')" class="px-3 py-1 rounded bg-raised text-sm text-white hover:bg-accentdk">+ Wishlist</button>';
-        if (wishlistIds.includes(game.appId)) {
+        if (isOnWishlist(game.appId)) {
           wishButton = '<button onclick="toggleWishlist(' + game.appId + ')" class="px-3 py-1 rounded bg-accentdk text-sm text-white">&#10003; On Wishlist</button>';
         }
 
@@ -260,6 +260,15 @@
       document.getElementById("prevButton").disabled = (page == 1);
       document.getElementById("nextButton").disabled = (page == totalPages);
     }
+    // checks if a game is already on the wishlist
+    function isOnWishlist(appId) {
+      for (let i = 0; i < wishlistIds.length; i++) {
+        if (wishlistIds[i] == appId) {
+          return true;
+        }
+      }
+      return false;
+    }
     async function loadWishlist() {
       try {
         const response = await fetch("wishlist.php");
@@ -277,7 +286,7 @@
     // adds or removes a game from the wishlist
     async function toggleWishlist(appId) {
       let action = "add";
-      if (wishlistIds.includes(appId)) {
+      if (isOnWishlist(appId)) {
         action = "remove";
       }
 
@@ -297,7 +306,14 @@
         wishlistIds.push(appId);
         showToast("Added to your wishlist.");
       } else {
-        wishlistIds = wishlistIds.filter(function (id) { return id != appId; });
+        //make a new list without this game
+        let newList = [];
+        for (let i = 0; i < wishlistIds.length; i++) {
+          if (wishlistIds[i] != appId) {
+            newList.push(wishlistIds[i]);
+          }
+        }
+        wishlistIds = newList;
         showToast("Removed from your wishlist.");
       }
       renderGames();
