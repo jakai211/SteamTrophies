@@ -393,6 +393,66 @@ function verifySteamLogin($params)
 }
 
 // RabbitMQ calls this for every message that arrives.
+
+// Global achievement definitions and rarity for one game.
+// This request does not need a player or website session.
+function getGlobalGameData($appId)
+{
+    $definitions = getAchievementDefinitions($appId);
+    if (($definitions['returnCode'] ?? '0') !== '1')
+    {
+        return $definitions;
+    }
+
+    $appId = (int)$definitions['appId'];
+    $items = $definitions['achievements'];
+    $percentages = array();
+    $rarityAvailable = true;
+
+    // A game with no returned definitions needs no rarity request.
+    if (count($items) > 0)
+    {
+        $url = "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?";
+        $url .= http_build_query(array(
+            "gameid" => $appId,
+            "format" => "json"
+        ));
+        $global = steamGet($url);
+        $rarityAvailable =
+            isset($global['achievementpercentages']['achievements']) &&
+            is_array($global['achievementpercentages']['achievements']);
+
+        if ($rarityAvailable)
+        {
+            foreach ($global['achievementpercentages']['achievements'] as $item)
+            {
+                if (isset($item['name'], $item['percent']) &&
+                    is_numeric($item['percent']) &&
+                    $item['percent'] >= 0 && $item['percent'] <= 100)
+                {
+                    $percentages[$item['name']] = (float)$item['percent'];
+                }
+            }
+        }
+    }
+
+    foreach ($items as &$item)
+    {
+        $item['globalPercent'] = $percentages[$item['id']] ?? null;
+        if ($item['globalPercent'] === null)
+        {
+            $rarityAvailable = false;
+        }
+    }
+    unset($item);
+
+    return array(
+        "returnCode" => '1',
+        "appId" => $appId,
+        "achievements" => $items,
+        "rarityAvailable" => $rarityAvailable
+    );
+}
 function requestProcessor($request)
 {
     if (!is_array($request) ||

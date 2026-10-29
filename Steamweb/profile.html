@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SteamTrophies - Profile</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind-config.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-page text-text font-sans">
+
+  <nav class="bg-nav border-b border-raised">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
+      <a href="profile.html" class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-md bg-raised flex items-center justify-center">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-white">Steam<span class="text-accent font-normal">Trophies</span></span>
+      </a>
+
+      <div class="flex items-center gap-7 text-text">
+        <a href="index.html" class="hover:text-white">Home</a>
+        <a href="browse.html" class="hover:text-white">Browse Games</a>
+        <a href="wishlist.html" class="hover:text-white">Wishlist</a>
+        <a href="recommended.html" class="hover:text-white">Recommended</a>
+      </div>
+
+      <div class="flex-1 max-w-xs relative">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input type="text" placeholder="Search games or trophies..."
+               class="w-full pl-9 pr-3 py-2 rounded bg-page border border-raised text-sm text-white placeholder-text/70 focus:outline-none focus:border-accent">
+      </div>
+
+      <div class="ml-auto flex items-center gap-6">
+        <button class="relative text-text hover:text-white" title="Notifications">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+          <span class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent"></span>
+        </button>
+
+        <div class="relative">
+          <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-white">
+            <img id="navAvatar" src="" alt="" class="w-8 h-8 rounded bg-raised object-cover">
+            <span id="navName">User</span>
+            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="hidden absolute right-0 mt-2 w-40 rounded bg-panel border border-raised shadow-xl z-20">
+            <a href="profile.html" class="block px-4 py-2 hover:bg-raised">Profile</a>
+            <form action="logout.php" method="POST">
+              <button type="submit" class="w-full text-left px-4 py-2 text-danger hover:bg-raised">Log out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-6 py-12 space-y-7">
+
+    <section id="notLinked" class="hidden bg-panel border border-raised rounded-lg p-10 text-center">
+      <h2 class="text-2xl font-bold text-white">Link your Steam account to track your achievements</h2>
+      <p class="mt-2 text-muted">Your Steam profile and game details must be set to Public.</p>
+      <a href="steamLogin.php" class="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded bg-nav border border-raised text-white hover:border-accent">
+        Sign in through <b>Steam</b>
+      </a>
+    </section>
+
+    <div id="linked" class="space-y-7">
+
+      <section class="bg-panel border border-raised rounded-lg p-6 flex items-start gap-6">
+        <div class="relative">
+          <img id="avatar" src="" alt="" class="w-24 h-24 rounded bg-raised object-cover">
+          <span class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-success border-2 border-panel"></span>
+        </div>
+
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <h1 id="steamName" class="text-3xl font-bold text-white"></h1>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs text-accent border border-accent/40 bg-accent/10">
+              <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-1.5 14.5-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7z"/></svg>
+              Verified via Steam
+            </span>
+          </div>
+          <p class="mt-1 text-sm text-muted">Site username: <span id="siteUsername" class="text-text"></span></p>
+          <div class="mt-2 flex items-center gap-5">
+            <div class="px-3 py-1 rounded bg-nav border border-raised font-mono text-xs text-muted">
+              STEAMID:<br><span id="steamId" class="text-text"></span>
+            </div>
+            <a id="profileLink" href="#" target="_blank" class="text-sm text-accent hover:text-white">View on Steam ↗</a>
+          </div>
+        </div>
+
+        <div class="text-right">
+          <div class="flex gap-3">
+            <button onclick="openUnlinkModal()" class="px-4 py-2 rounded bg-raised text-text hover:text-white">Unlink Steam</button>
+            <button id="syncButton" onclick="syncWithSteam()" class="flex items-center gap-2 px-4 py-2 rounded bg-accent text-nav font-semibold hover:bg-accent/90">
+              <svg id="syncIcon" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.3M3 12a9 9 0 0 1 15.5-6.3M21 3v6h-6M3 21v-6h6"/></svg>
+              Sync with Steam
+            </button>
+          </div>
+          <p id="lastSynced" class="mt-3 text-xs text-muted"></p>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-4 gap-5">
+        <div class="bg-panel border border-raised rounded-lg p-5">
+          <div class="flex justify-between">
+            <div>
+              <p class="text-sm font-semibold tracking-wider text-muted">PLATINUM</p>
+              <p id="platinumCount" class="mt-1 text-4xl font-light text-platinum">0</p>
+              <p class="mt-1 text-sm text-muted">100% clears</p>
+            </div>
+            <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-platinum">★</div>
+          </div>
+          <div class="mt-4 h-1 rounded bg-nav"><div id="platinumBar" class="h-1 rounded bg-platinum" style="width:0%"></div></div>
+        </div>
+
+        <div class="bg-panel border border-raised rounded-lg p-5">
+          <div class="flex justify-between">
+            <div>
+              <p class="text-sm font-semibold tracking-wider text-muted">GOLD</p>
+              <p id="goldCount" class="mt-1 text-4xl font-light text-gold">0</p>
+              <p class="mt-1 text-sm text-muted">Rare tier (&lt;20%)</p>
+            </div>
+            <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-gold">🏆</div>
+          </div>
+          <div class="mt-4 h-1 rounded bg-nav"><div id="goldBar" class="h-1 rounded bg-gold" style="width:0%"></div></div>
+        </div>
+
+        <div class="bg-panel border border-raised rounded-lg p-5">
+          <div class="flex justify-between">
+            <div>
+              <p class="text-sm font-semibold tracking-wider text-muted">SILVER</p>
+              <p id="silverCount" class="mt-1 text-4xl font-light text-silver">0</p>
+              <p class="mt-1 text-sm text-muted">Uncommon (20–50%)</p>
+            </div>
+            <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-silver">🏆</div>
+          </div>
+          <div class="mt-4 h-1 rounded bg-nav"><div id="silverBar" class="h-1 rounded bg-silver" style="width:0%"></div></div>
+        </div>
+
+        <div class="bg-panel border border-raised rounded-lg p-5">
+          <div class="flex justify-between">
+            <div>
+              <p class="text-sm font-semibold tracking-wider text-muted">BRONZE</p>
+              <p id="bronzeCount" class="mt-1 text-4xl font-light text-bronze">0</p>
+              <p class="mt-1 text-sm text-muted">Common (&gt;50%)</p>
+            </div>
+            <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-bronze">🏆</div>
+          </div>
+          <div class="mt-4 h-1 rounded bg-nav"><div id="bronzeBar" class="h-1 rounded bg-bronze" style="width:0%"></div></div>
+        </div>
+      </section>
+
+      <section class="bg-panel border border-raised rounded-lg p-6">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded bg-raised flex items-center justify-center text-accent">★</div>
+            <div>
+              <h2 class="font-bold tracking-wide text-white">MASTERED HALL OF FAME (100%)</h2>
+              <p class="text-sm text-muted">Games where every single achievement has been fully unlocked</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="masteredCount" class="font-mono text-sm text-muted"></span>
+            <button onclick="scrollHallOfFame(-1)" class="w-8 h-8 rounded border border-raised hover:bg-raised">‹</button>
+            <button onclick="scrollHallOfFame(1)" class="w-8 h-8 rounded border border-raised hover:bg-raised">›</button>
+          </div>
+        </div>
+        <div id="hallOfFame" class="mt-5 flex gap-4 overflow-x-auto scroll-smooth pb-2"></div>
+      </section>
+
+      <section class="grid grid-cols-5 gap-5">
+        <div class="col-span-2 bg-panel border border-raised rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold tracking-wide text-white">🏆 RAREST TROPHIES UNLOCKED</h2>
+            <a href="#" class="text-sm text-accent hover:text-white">View all</a>
+          </div>
+          <div id="rarestList" class="mt-5 space-y-3"></div>
+        </div>
+
+        <div class="col-span-3 bg-panel border border-raised rounded-lg p-6">
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold tracking-wide text-white">📊 COMPLETION ANALYTICS</h2>
+            <span class="font-mono text-sm text-muted">From your last sync</span>
+          </div>
+
+          <div class="mt-6 grid grid-cols-3 gap-4 p-5 rounded bg-nav/60 border border-raised">
+            <div class="flex items-center gap-4">
+              <div id="completionRing" class="w-16 h-16 rounded-full flex items-center justify-center"
+                   style="background: conic-gradient(#66C0F4 0%, #2A475E 0%);">
+                <div class="w-12 h-12 rounded-full bg-nav flex items-center justify-center text-sm font-bold text-white">
+                  <span id="completionRingText">0%</span>
+                </div>
+              </div>
+              <div>
+                <p class="text-sm text-muted">Average Completion</p>
+                <p id="averageCompletion" class="text-lg font-bold text-white">0%</p>
+              </div>
+            </div>
+            <div class="border-l border-raised pl-5">
+              <p class="text-sm text-muted">Perfect Games</p>
+              <p class="text-lg"><span id="perfectGames" class="text-2xl font-bold text-accent">0</span>
+                <span class="text-muted">/ <span id="totalGames">0</span> total</span></p>
+              <div class="mt-2 h-1 rounded bg-raised"><div id="perfectBar" class="h-1 rounded bg-accent" style="width:0%"></div></div>
+            </div>
+            <div class="border-l border-raised pl-5">
+              <p class="text-sm text-muted">Unlock Streak</p>
+              <p><span id="streak" class="text-2xl font-bold text-accent">0</span> <span class="text-muted">days</span></p>
+              <p class="text-xs text-muted">At least one unlock per day</p>
+            </div>
+          </div>
+
+          <div class="mt-7 flex items-center justify-between">
+            <p class="text-sm font-semibold text-white">Achievements unlocked per month (last 6 months)</p>
+            <span class="font-mono text-xs text-accent">Current month highlighted</span>
+          </div>
+          <div id="monthChart" class="mt-4 h-44 px-6 pt-6 pb-2 rounded bg-nav/60 border border-raised flex items-end justify-around gap-6"></div>
+        </div>
+      </section>
+
+      <section class="bg-panel border border-raised rounded-lg p-6">
+        <div class="flex items-center gap-4 pb-5 border-b border-raised">
+          <button id="libraryTab" onclick="showLibraryTab('library')" class="flex items-center gap-2 px-4 py-2 rounded bg-raised text-white font-semibold">
+            Library <span id="libraryCount" class="px-1.5 rounded bg-nav font-mono text-xs text-muted">0</span>
+          </button>
+          <button id="recentTab" onclick="showLibraryTab('recent')" class="flex items-center gap-2 px-4 py-2 rounded text-muted font-semibold hover:text-white">
+            Recently Played <span class="px-1.5 rounded bg-nav font-mono text-xs text-muted">Last 2 weeks</span>
+          </button>
+
+          <div class="ml-auto flex items-center gap-3 text-sm">
+            <input id="libraryFilter" oninput="renderLibrary()" type="text" placeholder="Filter library games..."
+                   class="w-56 px-3 py-2 rounded bg-page border border-raised text-white placeholder-text/70 focus:outline-none focus:border-accent">
+            <label class="text-muted">Status:</label>
+            <select id="statusFilter" onchange="renderLibrary()" class="px-3 py-2 rounded bg-page border border-raised text-white">
+              <option value="all">All</option>
+              <option value="completed">Completed</option>
+              <option value="progress">In progress</option>
+              <option value="notstarted">Not started</option>
+              <option value="none">No achievements</option>
+            </select>
+            <label class="text-muted">Sort:</label>
+            <select id="sortLibrary" onchange="renderLibrary()" class="px-3 py-2 rounded bg-page border border-raised text-white">
+              <option value="hours">Hours played</option>
+              <option value="completion">Completion %</option>
+              <option value="name">Name</option>
+            </select>
+          </div>
+        </div>
+
+        <table class="w-full mt-4 text-left">
+          <thead>
+            <tr class="bg-nav text-sm font-semibold tracking-wider text-muted">
+              <th class="px-4 py-3 rounded-l">GAME TITLE</th>
+              <th class="px-4 py-3">TROPHY PROGRESS</th>
+              <th class="px-4 py-3">COMPLETION</th>
+              <th class="px-4 py-3 rounded-r text-right">HOURS PLAYED</th>
+            </tr>
+          </thead>
+          <tbody id="libraryRows"></tbody>
+        </table>
+        <p id="libraryEmpty" class="hidden py-8 text-center text-muted">No games match your search.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="border-t border-raised bg-nav">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex justify-between text-sm text-muted">
+      <p>SteamTrophies is a student project powered by the Steam Web API. Not affiliated with Valve Corporation.</p>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Status</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="unlinkModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-30" onclick="closeUnlinkModal()">
+    <div class="w-96 bg-panel border border-raised rounded-lg p-6" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-white">Unlink Steam?</h3>
+      <p class="mt-2 text-sm text-muted">Your SteamTrophies account stays. You can link Steam again later.</p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button onclick="closeUnlinkModal()" class="px-4 py-2 rounded bg-raised">Cancel</button>
+        <button onclick="unlinkSteam()" class="px-4 py-2 rounded bg-danger text-white font-semibold">Unlink</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded bg-raised border border-accent text-white shadow-xl"></div>
+
+  <script>
+    // the data comes from profileData.php (filled in by loadProfile below)
+    let siteUsername = "";
+    let profile = { steamId: "", name: "", avatar: "", profileUrl: "#", updatedAt: null };
+    let games = [];
+    let achievements = [];
+
+    // helpers
+
+    function gameImage(appId) {
+      return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg";
+    }
+
+    function esc(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // percent of a game's achievements unlocked
+    function completion(game) {
+      if (game.total == 0) {
+        return 0;
+      }
+      return Math.round(game.unlocked / game.total * 100);
+    }
+
+    //gold, silver or bronze from how rare it is
+    function tier(globalPercent) {
+      if (globalPercent < 20) return "Gold";
+      if (globalPercent <= 50) return "Silver";
+      return "Bronze";
+    }
+
+    function rarityBadge(globalPercent) {
+      if (globalPercent < 1)  return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-gold border border-gold/50 bg-gold/10">' + globalPercent + '% ULTRA RARE</span>';
+      if (globalPercent < 5)  return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-veryrare border border-veryrare/50 bg-veryrare/10">' + globalPercent + '% VERY RARE</span>';
+      if (globalPercent < 20) return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-accent border border-accent/50 bg-accent/10">' + globalPercent + '% RARE</span>';
+      if (globalPercent <= 50) return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-success border border-success/50 bg-success/10">' + globalPercent + '% UNCOMMON</span>';
+      return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-muted border border-raised">' + globalPercent + '% COMMON</span>';
+    }
+
+    function formatDate(epoch) {
+      return new Date(epoch * 1000).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      setTimeout(function () { toast.classList.add("hidden"); }, 2500);
+    }
+
+    function renderHeader() {
+      document.getElementById("avatar").src = profile.avatar;
+      document.getElementById("navAvatar").src = profile.avatar;
+      document.getElementById("navName").textContent = siteUsername;
+      document.getElementById("steamName").textContent = profile.name;
+      document.getElementById("siteUsername").textContent = "@" + siteUsername;
+      document.getElementById("steamId").textContent = profile.steamId;
+      document.getElementById("profileLink").href = profile.profileUrl;
+
+      //updatedAt will be empty after the first sync
+      if (!profile.updatedAt) {
+        document.getElementById("lastSynced").textContent = "Not synced yet";
+      } else {
+        const minutesAgo = Math.round((Date.now() / 1000 - profile.updatedAt) / 60);
+        document.getElementById("lastSynced").textContent = "Last synced: " + minutesAgo + " mins ago";
+      }
+    }
+
+    function renderTrophyCounts() {
+      let gold = 0;
+      let silver = 0;
+      let bronze = 0;
+      for (const a of achievements) {
+        const t = tier(a.globalPercent);
+        if (t == "Gold") gold++;
+        else if (t == "Silver") silver++;
+        else bronze++;
+      }
+
+      let platinum = 0;
+      let gamesWithAchievements = 0;
+      for (const g of games) {
+        if (g.total > 0) {
+          gamesWithAchievements++;
+          if (g.unlocked == g.total) platinum++;
+        }
+      }
+
+      const all = gold + silver + bronze;
+      document.getElementById("platinumCount").textContent = platinum;
+      document.getElementById("goldCount").textContent = gold;
+      document.getElementById("silverCount").textContent = silver;
+      document.getElementById("bronzeCount").textContent = bronze;
+
+      document.getElementById("platinumBar").style.width = (gamesWithAchievements ? platinum / gamesWithAchievements * 100 : 0) + "%";
+      document.getElementById("goldBar").style.width = (all ? gold / all * 100 : 0) + "%";
+      document.getElementById("silverBar").style.width = (all ? silver / all * 100 : 0) + "%";
+      document.getElementById("bronzeBar").style.width = (all ? bronze / all * 100 : 0) + "%";
+    }
+
+    function renderHallOfFame() {
+      const mastered = games.filter(function (g) { return g.total > 0 && g.unlocked == g.total; });
+      document.getElementById("masteredCount").textContent = mastered.length + " Games Mastered";
+
+      let html = "";
+      for (const g of mastered) {
+        html += `
+          <div class="w-72 shrink-0 rounded-lg overflow-hidden bg-nav border border-raised">
+            <div class="relative h-36 bg-raised">
+              <img src="${gameImage(g.appId)}" alt="" class="w-full h-full object-cover">
+              <span class="absolute top-2 right-2 px-2 py-0.5 rounded bg-black/70 text-xs font-semibold text-success">🏆 ${g.unlocked}/${g.total}</span>
+            </div>
+            <div class="p-3">
+              <p class="font-semibold text-white">${esc(g.name)}</p>
+              <p class="text-xs text-muted">${g.hoursPlayed} hrs logged</p>
+              <div class="mt-2 h-1.5 rounded bg-success"></div>
+            </div>
+          </div>`;
+      }
+      document.getElementById("hallOfFame").innerHTML = html;
+    }
+
+    function scrollHallOfFame(direction) {
+      document.getElementById("hallOfFame").scrollLeft += direction * 300;
+    }
+
+    function renderRarest() {
+      //copies the list and sorts rarest first, keeps the top 3
+      const rarest = achievements.slice().sort(function (a, b) { return a.globalPercent - b.globalPercent; }).slice(0, 3);
+
+      let html = "";
+      for (const a of rarest) {
+        html += `
+          <div class="flex gap-3 p-3 rounded bg-nav border border-raised">
+            <img src="${gameImage(a.appId)}" alt="" class="w-12 h-12 rounded object-cover bg-raised">
+            <div class="flex-1">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="text-sm font-semibold text-white">${esc(a.gameName)}</p>
+                  <p class="text-sm text-text">${esc(a.name)}</p>
+                </div>
+                ${rarityBadge(a.globalPercent)}
+              </div>
+              <p class="mt-1 text-xs text-muted">${esc(a.description)}</p>
+              <div class="mt-2 pt-2 border-t border-raised flex justify-between text-xs text-muted">
+                <span>Tier: <span class="text-gold">${tier(a.globalPercent)}</span></span>
+                <span>Unlocked ${formatDate(a.unlockTime)}</span>
+              </div>
+            </div>
+          </div>`;
+      }
+      document.getElementById("rarestList").innerHTML = html;
+    }
+
+    function renderAnalytics() {
+      const withAchievements = games.filter(function (g) { return g.total > 0; });
+      let sum = 0;
+      for (const g of withAchievements) {
+        sum += completion(g);
+      }
+      const average = withAchievements.length ? Math.round(sum / withAchievements.length * 10) / 10 : 0;
+
+      document.getElementById("averageCompletion").textContent = average + "%";
+      document.getElementById("completionRingText").textContent = Math.round(average) + "%";
+      document.getElementById("completionRing").style.background =
+        "conic-gradient(#66C0F4 " + average + "%, #2A475E " + average + "%)";
+
+      const perfect = withAchievements.filter(function (g) { return g.unlocked == g.total; }).length;
+      document.getElementById("perfectGames").textContent = perfect;
+      document.getElementById("totalGames").textContent = games.length;
+      document.getElementById("perfectBar").style.width = (games.length ? perfect / games.length * 100 : 0) + "%";
+
+      const unlockDays = achievements.map(function (a) { return new Date(a.unlockTime * 1000).toDateString(); });
+      let streak = 0;
+      const day = new Date();
+      while (unlockDays.includes(day.toDateString())) {
+        streak++;
+        day.setDate(day.getDate() - 1);
+      }
+      document.getElementById("streak").textContent = streak;
+
+      //bar chart-unlocks per month for the last 6 months
+      const months = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(1);
+        d.setMonth(d.getMonth() - i);
+        months.push({ month: d.getMonth(), year: d.getFullYear(), label: d.toLocaleString("en-US", { month: "short" }), count: 0 });
+      }
+      for (const a of achievements) {
+        const d = new Date(a.unlockTime * 1000);
+        for (const m of months) {
+          if (m.month == d.getMonth() && m.year == d.getFullYear()) m.count++;
+        }
+      }
+
+      let highest = 1;
+      for (const m of months) {
+        if (m.count > highest) highest = m.count;
+      }
+
+      let html = "";
+      for (let i = 0; i < months.length; i++) {
+        const m = months[i];
+        const isCurrent = (i == months.length - 1);
+        const height = Math.max(m.count / highest * 100, 4);
+        html += `
+          <div class="flex-1 h-full flex flex-col items-center justify-end" title="${m.count} unlocked">
+            ${isCurrent ? '<span class="mb-1 text-xs font-bold text-accent">' + m.count + '</span>' : ""}
+            <div class="w-10 rounded-t ${isCurrent ? "bg-accent" : "bg-raised hover:bg-accentdk"}" style="height:${height}%"></div>
+            <span class="mt-2 font-mono text-xs ${isCurrent ? "text-accent font-bold" : "text-muted"}">${m.label}</span>
+          </div>`;
+      }
+      document.getElementById("monthChart").innerHTML = html;
+    }
+
+    let libraryTab = "library";
+
+    function showLibraryTab(tab) {
+      libraryTab = tab;
+      const active = "flex items-center gap-2 px-4 py-2 rounded bg-raised text-white font-semibold";
+      const normal = "flex items-center gap-2 px-4 py-2 rounded text-muted font-semibold hover:text-white";
+      document.getElementById("libraryTab").className = (tab == "library") ? active : normal;
+      document.getElementById("recentTab").className = (tab == "recent") ? active : normal;
+      renderLibrary();
+    }
+
+    function renderLibrary() {
+      document.getElementById("libraryCount").textContent = games.length;
+
+      const search = document.getElementById("libraryFilter").value.toLowerCase();
+      const status = document.getElementById("statusFilter").value;
+      const sort = document.getElementById("sortLibrary").value;
+
+      let list = games.filter(function (g) {
+        if (libraryTab == "recent" && g.minutesLastTwoWeeks == 0) return false;
+        if (!g.name.toLowerCase().includes(search)) return false;
+        if (status == "completed" && !(g.total > 0 && g.unlocked == g.total)) return false;
+        if (status == "progress" && !(g.unlocked > 0 && g.unlocked < g.total)) return false;
+        if (status == "notstarted" && !(g.total > 0 && g.unlocked == 0)) return false;
+        if (status == "none" && g.total != 0) return false;
+        return true;
+      });
+
+      if (sort == "hours") list.sort(function (a, b) { return b.hoursPlayed - a.hoursPlayed; });
+      if (sort == "completion") list.sort(function (a, b) { return completion(b) - completion(a); });
+      if (sort == "name") list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+      let html = "";
+      for (const g of list) {
+        const percent = completion(g);
+        const isPlatinum = (g.total > 0 && g.unlocked == g.total);
+        let hours = g.hoursPlayed + " h";
+        if (libraryTab == "recent") {
+          hours = Math.round(g.minutesLastTwoWeeks / 6) / 10 + " h (2 wks)";
+        }
+        html += `
+          <tr class="border-b border-raised hover:bg-raised/40 cursor-pointer" onclick="window.location.href='game.html?appId=${g.appId}'">
+            <td class="px-4 py-3">
+              <div class="flex items-center gap-3">
+                <img src="${gameImage(g.appId)}" alt="" class="w-16 h-8 rounded object-cover bg-raised">
+                <span class="text-white">${esc(g.name)}</span>
+                ${isPlatinum ? '<span class="text-platinum" title="Platinum">★</span>' : ""}
+              </div>
+            </td>
+            <td class="px-4 py-3">
+              ${g.total == 0 ? '<span class="text-sm text-muted">No achievements</span>' : `
+              <div class="flex items-center gap-3">
+                <div class="w-40 h-1.5 rounded bg-nav"><div class="h-1.5 rounded ${isPlatinum ? "bg-success" : "bg-accent"}" style="width:${percent}%"></div></div>
+                <span class="text-sm text-muted">${g.unlocked} of ${g.total}</span>
+              </div>`}
+            </td>
+            <td class="px-4 py-3 ${isPlatinum ? "text-success" : "text-text"}">${g.total == 0 ? "-" : percent + "%"}</td>
+            <td class="px-4 py-3 text-right text-text">${hours}</td>
+          </tr>`;
+      }
+      document.getElementById("libraryRows").innerHTML = html;
+      document.getElementById("libraryEmpty").classList.toggle("hidden", list.length > 0);
+    }
+
+    function toggleUserMenu() {
+      document.getElementById("userMenu").classList.toggle("hidden");
+    }
+
+    //asks steamSync.php to get the newest data from steam and saves it
+    async function syncWithSteam() {
+      const icon = document.getElementById("syncIcon");
+      icon.classList.add("animate-spin");
+      showToast("Syncing with Steam, this can take a minute...");
+
+      try {
+        const response = await fetch("steamSync.php", { method: "POST" });
+        const result = await response.json();
+        showToast(result.message);
+        if (result.success) {
+          await loadProfile(); 
+        }
+      } catch (error) {
+        showToast("Sync failed, try again.");
+      }
+
+      icon.classList.remove("animate-spin");
+    }
+
+    function openUnlinkModal() {
+      document.getElementById("unlinkModal").classList.remove("hidden");
+    }
+
+    function closeUnlinkModal() {
+      document.getElementById("unlinkModal").classList.add("hidden");
+    }
+
+    // asks unlinkSteam.php to remove the steam link
+    async function unlinkSteam() {
+      closeUnlinkModal();
+      const response = await fetch("unlinkSteam.php", { method: "POST" });
+      const result = await response.json();
+
+      if (result.success) {
+        document.getElementById("linked").classList.add("hidden");
+        document.getElementById("notLinked").classList.remove("hidden");
+        showToast("Steam unlinked");
+      } else {
+        showToast("Could not unlink Steam.");
+      }
+    }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key == "Escape") closeUnlinkModal();
+    });
+
+    // gets the real data from profileData.php and draws the page
+    async function loadProfile() {
+      const response = await fetch("profileData.php");
+      const result = await response.json();
+
+      if (!result.loggedIn) {
+        window.location.href = "login.html";
+        return;
+      }
+
+      siteUsername = result.username;
+      document.getElementById("navName").textContent = siteUsername;
+
+      if (!result.linked) {
+        document.getElementById("linked").classList.add("hidden");
+        document.getElementById("notLinked").classList.remove("hidden");
+        return;
+      }
+
+      document.getElementById("notLinked").classList.add("hidden");
+      document.getElementById("linked").classList.remove("hidden");
+
+      profile = result.profile;
+      games = result.games;
+      achievements = result.achievements;
+
+      renderHeader();
+      renderTrophyCounts();
+      renderHallOfFame();
+      renderRarest();
+      renderAnalytics();
+      renderLibrary();
+
+      if (games.length == 0) {
+        showToast("Click Sync with Steam to load your games.");
+      }
+    }
+
+    //after sign in through steam, steamCallback.php sends us here with ?steam=linked
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("steam") == "linked") showToast("Steam account linked! Click Sync with Steam.");
+    if (params.get("steam") == "link_failed") showToast("Could not link that Steam account.");
+
+    loadProfile();
+  </script>
+</body>
+</html>

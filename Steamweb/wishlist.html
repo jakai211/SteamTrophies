@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SteamTrophies - Wishlist</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind-config.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-page text-text font-sans">
+
+  <nav class="bg-nav border-b border-raised">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
+      <a href="profile.html" class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-md bg-raised flex items-center justify-center">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-white">Steam<span class="text-accent font-normal">Trophies</span></span>
+      </a>
+
+      <div class="flex items-center gap-7 text-text">
+        <a href="profile.html" class="hover:text-white">Home</a>
+        <a href="browse.html" class="hover:text-white">Browse Games</a>
+        <a href="wishlist.html" class="flex items-center gap-2 text-white font-semibold">
+          Wishlist <span id="navCount" class="px-2 rounded-full bg-raised text-xs text-accent">0</span>
+        </a>
+        <a href="recommended.html" class="hover:text-white">Recommended</a>
+      </div>
+
+      <div class="ml-auto flex items-center gap-6">
+        <div class="relative">
+          <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-white">
+            <span id="navName">User</span>
+            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="hidden absolute right-0 mt-2 w-40 rounded bg-panel border border-raised shadow-xl z-20">
+            <a href="profile.html" class="block px-4 py-2 hover:bg-raised">Profile</a>
+            <form action="logout.php" method="POST">
+              <button type="submit" class="w-full text-left px-4 py-2 text-danger hover:bg-raised">Log out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-6 py-12 space-y-6">
+
+    <section class="bg-panel border border-raised rounded-lg p-6">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-3xl font-bold text-white">Wishlist</h1>
+            <span id="titleCount" class="px-2 rounded-full bg-raised text-sm text-accent">0</span>
+          </div>
+          <p class="mt-2 text-sm text-muted">Games you are watching. Turn on the bell to get alerts for a game.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 pt-6 border-t border-raised grid grid-cols-3 gap-5">
+        <div class="flex items-center gap-4 p-4 rounded bg-nav/60 border border-raised">
+          <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-accent">🔖</div>
+          <div>
+            <p class="text-xs font-semibold tracking-wider text-muted">TRACKED TITLES</p>
+            <p id="trackedCount" class="text-2xl font-bold text-white">0</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 p-4 rounded bg-nav/60 border border-raised">
+          <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-success">🔔</div>
+          <div>
+            <p class="text-xs font-semibold tracking-wider text-muted">ALERTS ON</p>
+            <p id="alertsCount" class="text-2xl font-bold text-success">0</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 p-4 rounded bg-nav/60 border border-raised">
+          <div class="w-10 h-10 rounded bg-raised flex items-center justify-center text-gold">📅</div>
+          <div>
+            <p class="text-xs font-semibold tracking-wider text-muted">ADDED THIS MONTH</p>
+            <p id="monthCount" class="text-2xl font-bold text-white">0</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-raised rounded-lg p-4 flex items-center gap-4">
+      <input id="search" oninput="renderWishlist()" type="text" placeholder="Search by game title or AppID..."
+             class="flex-1 px-4 py-2 rounded bg-page border border-raised text-white placeholder-text/70 focus:outline-none focus:border-accent">
+
+      <div class="flex items-center gap-2 px-3 py-1 rounded bg-page border border-raised">
+        <span class="font-mono text-xs text-muted">SORT:</span>
+        <select id="sort" onchange="renderWishlist()" class="px-2 py-1 rounded bg-panel border border-raised text-sm text-white">
+          <option value="newest">Date Added (Newest)</option>
+          <option value="oldest">Date Added (Oldest)</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
+
+      <div class="flex gap-1 p-1 rounded bg-page border border-raised">
+        <button id="filterAll" onclick="setFilter('all')" class="px-3 py-1 rounded text-sm bg-raised text-white">All</button>
+        <button id="filterAlerts" onclick="setFilter('alerts')" class="px-3 py-1 rounded text-sm text-muted hover:text-white">🔔 Alerts On</button>
+      </div>
+    </section>
+
+    <section id="wishlist" class="space-y-3"></section>
+
+    <section id="emptyBox" class="hidden bg-panel border border-raised rounded-lg p-10 text-center">
+      <p id="emptyText" class="text-lg text-white">Your wishlist is empty.</p>
+      <a href="browse.html" class="inline-block mt-4 px-5 py-2 rounded bg-accent text-nav font-semibold hover:bg-accent/90">Browse games</a>
+    </section>
+  </main>
+
+  <footer class="border-t border-raised bg-nav">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex justify-between text-sm text-muted">
+      <p>SteamTrophies is a student project powered by the Steam Web API. Not affiliated with Valve Corporation.</p>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Status</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="removeModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-30" onclick="closeRemoveModal()">
+    <div class="w-96 bg-panel border border-raised rounded-lg p-6" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-white">Remove from wishlist?</h3>
+      <p id="removeText" class="mt-2 text-sm text-muted"></p>
+      <div class="mt-6 flex justify-end gap-3">
+        <button onclick="closeRemoveModal()" class="px-4 py-2 rounded bg-raised">Cancel</button>
+        <button onclick="confirmRemove()" class="px-4 py-2 rounded bg-danger text-white font-semibold">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded bg-raised border border-accent text-white shadow-xl"></div>
+
+  <script>
+    let items = [];
+
+    let filter = "all";
+
+    let removeAppId = 0;
+
+    function gameImage(appId) {
+      return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg";
+    }
+
+    function esc(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(epoch) {
+      return new Date(epoch * 1000).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      setTimeout(function () { toast.classList.add("hidden"); }, 2500);
+    }
+
+    function toggleUserMenu() {
+      document.getElementById("userMenu").classList.toggle("hidden");
+    }
+
+    async function sendWishlist(data) {
+      const response = await fetch("wishlist.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: data
+      });
+      return response.json();
+    }
+
+    async function loadUser() {
+      const response = await fetch("validateToken.php");
+      const result = await response.json();
+      if (!result.valid) {
+        window.location.href = "login.html";
+        return;
+      }
+      document.getElementById("navName").textContent = result.username;
+    }
+
+    async function loadWishlist() {
+      const response = await fetch("wishlist.php");
+      const result = await response.json();
+
+      if (!result.success) {
+        showToast(result.message);
+        return;
+      }
+
+      items = result.items;
+      renderWishlist();
+    }
+
+    function renderStats() {
+      let alertsOn = 0;
+      let thisMonth = 0;
+      const now = new Date();
+
+      for (const item of items) {
+        if (item.notify == 1) {
+          alertsOn++;
+        }
+        const added = new Date(item.added_at * 1000);
+        if (added.getMonth() == now.getMonth() && added.getFullYear() == now.getFullYear()) {
+          thisMonth++;
+        }
+      }
+
+      document.getElementById("navCount").textContent = items.length;
+      document.getElementById("titleCount").textContent = items.length;
+      document.getElementById("trackedCount").textContent = items.length;
+      document.getElementById("alertsCount").textContent = alertsOn;
+      document.getElementById("monthCount").textContent = thisMonth;
+    }
+
+    function renderWishlist() {
+      renderStats();
+
+      const search = document.getElementById("search").value.toLowerCase();
+      const sort = document.getElementById("sort").value;
+
+      let list = [];
+      for (const item of items) {
+        const matchesName = item.name.toLowerCase().includes(search);
+        const matchesId = String(item.app_id).includes(search);
+        if (!matchesName && !matchesId) continue;
+        if (filter == "alerts" && item.notify != 1) continue;
+        list.push(item);
+      }
+
+      if (sort == "newest") list.sort(function (a, b) { return b.added_at - a.added_at; });
+      if (sort == "oldest") list.sort(function (a, b) { return a.added_at - b.added_at; });
+      if (sort == "name") list.sort(function (a, b) { return a.name.localeCompare(b.name); });
+
+      const emptyBox = document.getElementById("emptyBox");
+      if (list.length == 0) {
+        emptyBox.classList.remove("hidden");
+        if (items.length == 0) {
+          document.getElementById("emptyText").textContent = "Your wishlist is empty.";
+        } else {
+          document.getElementById("emptyText").textContent = "No games match your search.";
+        }
+      } else {
+        emptyBox.classList.add("hidden");
+      }
+
+      let html = "";
+      for (const item of list) {
+        let bellButton = "";
+        if (item.notify == 1) {
+          bellButton = '<button onclick="toggleNotify(' + item.app_id + ')" title="Alerts on" class="w-10 h-10 rounded bg-accent/20 border border-accent/50 text-accent hover:bg-accent/30">🔔</button>';
+        } else {
+          bellButton = '<button onclick="toggleNotify(' + item.app_id + ')" title="Alerts off" class="w-10 h-10 rounded bg-nav border border-raised text-muted opacity-60 hover:opacity-100">🔕</button>';
+        }
+
+        html += `
+          <div class="flex items-center gap-5 p-4 rounded-lg bg-panel border border-raised hover:border-accentdk">
+            <a href="game.html?appId=${item.app_id}" class="w-36 h-16 shrink-0 rounded overflow-hidden bg-raised">
+              <img src="${gameImage(item.app_id)}" alt="" class="w-full h-full object-cover">
+            </a>
+
+            <div class="flex-1">
+              <div class="flex items-center gap-3">
+                <a href="game.html?appId=${item.app_id}" class="font-semibold text-white hover:text-accent">${esc(item.name)}</a>
+                <span class="px-2 rounded bg-nav border border-raised font-mono text-xs text-muted">#${item.app_id}</span>
+              </div>
+              <p class="mt-1 font-mono text-xs text-muted">📅 Added ${formatDate(item.added_at)}</p>
+            </div>
+
+            <div class="flex items-center gap-2">
+              ${bellButton}
+              <a href="https://store.steampowered.com/app/${item.app_id}" target="_blank"
+                 class="px-4 py-2 rounded bg-raised text-white text-sm hover:bg-accentdk">Store</a>
+              <button onclick="openRemoveModal(${item.app_id})" title="Remove"
+                      class="w-10 h-10 rounded bg-nav border border-raised text-muted hover:text-danger hover:border-danger">🗑</button>
+            </div>
+          </div>`;
+      }
+      document.getElementById("wishlist").innerHTML = html;
+    }
+
+    function setFilter(newFilter) {
+      filter = newFilter;
+      const active = "px-3 py-1 rounded text-sm bg-raised text-white";
+      const normal = "px-3 py-1 rounded text-sm text-muted hover:text-white";
+      document.getElementById("filterAll").className = (filter == "all") ? active : normal;
+      document.getElementById("filterAlerts").className = (filter == "alerts") ? active : normal;
+      renderWishlist();
+    }
+
+x    async function toggleNotify(appId) {
+      for (const item of items) {
+        if (item.app_id == appId) {
+          let newValue = 1;
+          if (item.notify == 1) {
+            newValue = 0;
+          }
+
+          const result = await sendWishlist("action=notify&appId=" + appId + "&notify=" + newValue);
+          if (result.success) {
+            item.notify = newValue;
+            renderWishlist();
+            if (newValue == 1) {
+              showToast("Alerts on for " + item.name);
+            } else {
+              showToast("Alerts off for " + item.name);
+            }
+          } else {
+            showToast(result.message);
+          }
+        }
+      }
+    }
+
+    function openRemoveModal(appId) {
+      removeAppId = appId;
+      for (const item of items) {
+        if (item.app_id == appId) {
+          document.getElementById("removeText").textContent = item.name + " will be removed from your wishlist.";
+        }
+      }
+      document.getElementById("removeModal").classList.remove("hidden");
+    }
+
+    function closeRemoveModal() {
+      document.getElementById("removeModal").classList.add("hidden");
+    }
+
+    async function confirmRemove() {
+      closeRemoveModal();
+      const result = await sendWishlist("action=remove&appId=" + removeAppId);
+      if (result.success) {
+        showToast("Removed from wishlist");
+        loadWishlist(); 
+      } else {
+        showToast(result.message);
+      }
+    }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key == "Escape") closeRemoveModal();
+    });
+
+    loadUser();
+    loadWishlist();
+  </script>
+</body>
+</html>
