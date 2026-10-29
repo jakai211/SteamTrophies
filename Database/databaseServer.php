@@ -785,7 +785,91 @@ function doGetWishlist($sessionId)
 
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC); 
 }
+// gets one page of games for the browse page
+function doBrowseGames($sessionId, $search, $ownedOnly, $sort, $page)
+{
+    $mydb = connectDB(); 
+    $mydb->set_charset("utf8mb4"); 
 
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $steamId = "";
+    $stmt = $mydb->prepare("SELECT steam_id FROM user_steam_links WHERE user_id = ?");
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $link = $stmt->get_result()->fetch_assoc();
+    if ($link)
+    {
+        $steamId = $link['steam_id'];
+    }
+    $perPage = 24;
+    if ($page < 1)
+    {
+        $page = 1;
+    }
+    $offset = ($page - 1) * $perPage;
+
+    $like = "%" . $search . "%";
+
+    $where = "WHERE g.name <> '' AND g.name LIKE ?";
+    if ($ownedOnly == 1)
+    {
+        $where = $where . " AND pg.in_owned_library = 1";
+    }
+
+    $order = "ORDER BY g.name ASC";
+    if ($sort == "played")
+    {
+        $order = "ORDER BY pg.minutes_played DESC, g.name ASC";
+    }
+
+    $from = "FROM games g LEFT JOIN player_games pg ON pg.app_id = g.app_id AND pg.steam_id = ?";
+
+    $stmt = $mydb->prepare("SELECT COUNT(*) AS total " . $from . " " . $where);
+    $stmt->bind_param("ss", $steamId, $like);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $total = (int)$row['total'];
+
+    $stmt = $mydb->prepare("SELECT g.app_id, g.name, pg.in_owned_library, pg.minutes_played " . $from . " " . $where . " " . $order . " LIMIT ? OFFSET ?");
+    $stmt->bind_param("ssii", $steamId, $like, $perPage, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $games = array();
+    while ($row = $result->fetch_assoc())
+    {
+        $owned = false;
+        if ($row['in_owned_library'] == 1)
+        {
+            $owned = true;
+        }
+
+        $minutes = 0;
+        if ($row['minutes_played'] != null)
+        {
+            $minutes = (int)$row['minutes_played'];
+        }
+
+        $game = array();
+        $game['appId'] = (int)$row['app_id'];
+        $game['name'] = $row['name'];
+        $game['owned'] = $owned;
+        $game['hoursPlayed'] = round($minutes / 60, 1); 
+        $games[] = $game;
+    }
+
+    $data = array();
+    $data['total'] = $total;
+    $data['page'] = $page;
+    $data['perPage'] = $perPage;
+    $data['games'] = $games;
+    return $data;
+}
 function handleRequest($request)
 {
   echo "received request".PHP_EOL;
@@ -932,6 +1016,16 @@ function handleRequest($request)
         return array("success" => false, "message" => "session invalid");
       }
       return array("success" => true, "message" => "wishlist loaded", "items" => $items);
+
+    case "browse_games":
+      $result = doBrowseGames($request['sessionId'], $request['search'], intval($request['ownedOnly']), $request['sort'], intval($request['page']));
+      if (is_array($result))
+      {
+        $result['success'] = true;
+        $result['message'] = "games loaded";
+        return $result;
+      }
+      return array("success" => false, "message" => $result);
 
     case "save_game_catalog":
     case "get_global_games_due":
