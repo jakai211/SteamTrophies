@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SteamTrophies - Game</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="tailwind-config.js"></script>
+</head>
+<body class="min-h-screen flex flex-col bg-page text-text font-sans">
+
+  <nav class="bg-nav border-b border-raised">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center gap-8">
+      <a href="profile.html" class="flex items-center gap-2">
+        <div class="w-9 h-9 rounded-md bg-raised flex items-center justify-center">
+          <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3"/>
+          </svg>
+        </div>
+        <span class="text-xl font-bold text-white">Steam<span class="text-accent font-normal">Trophies</span></span>
+      </a>
+
+      <div class="flex items-center gap-7 text-text">
+        <a href="profile.html" class="hover:text-white">Home</a>
+        <a href="browse.html" class="hover:text-white">Browse Games</a>
+        <a href="wishlist.html" class="hover:text-white">Wishlist</a>
+        <a href="recommended.html" class="hover:text-white">Recommended</a>
+      </div>
+
+      <div class="ml-auto flex items-center gap-6">
+        <div class="relative">
+          <button onclick="toggleUserMenu()" class="flex items-center gap-2 text-white">
+            <span id="navName">User</span>
+            <svg class="w-4 h-4 text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <div id="userMenu" class="hidden absolute right-0 mt-2 w-40 rounded bg-panel border border-raised shadow-xl z-20">
+            <a href="profile.html" class="block px-4 py-2 hover:bg-raised">Profile</a>
+            <form action="logout.php" method="POST">
+              <button type="submit" class="w-full text-left px-4 py-2 text-danger hover:bg-raised">Log out</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <section class="relative h-64 bg-nav overflow-hidden">
+    <img id="heroImage" src="" alt="" class="absolute inset-0 w-full h-full object-cover opacity-40">
+    <div class="absolute inset-0 bg-gradient-to-t from-page to-transparent"></div>
+    <div class="relative max-w-7xl mx-auto px-6 h-full flex flex-col justify-end pb-8">
+      <p class="text-sm text-muted">
+        <a href="profile.html" class="text-accent hover:text-white">Profile</a> &gt; <span id="crumbName"></span>
+      </p>
+      <h1 id="gameName" class="mt-2 text-4xl font-bold text-white">Loading...</h1>
+    </div>
+  </section>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-6 py-8 space-y-6">
+
+    <section class="bg-panel border border-raised rounded-lg p-6 flex items-center gap-8">
+      <div class="flex-1">
+        <p class="text-sm font-semibold tracking-wider text-muted">MY PROGRESS</p>
+        <div class="mt-2 flex items-center gap-4">
+          <div class="flex-1 h-2 rounded bg-nav"><div id="progressBar" class="h-2 rounded bg-accent" style="width:0%"></div></div>
+          <span id="progressPercent" class="text-lg font-bold text-white">0%</span>
+        </div>
+        <p id="progressText" class="mt-2 text-sm text-muted"></p>
+      </div>
+
+      <div class="flex gap-6 text-center">
+        <div><p id="goldCount" class="text-2xl font-light text-gold">0</p><p class="text-xs text-muted">GOLD</p></div>
+        <div><p id="silverCount" class="text-2xl font-light text-silver">0</p><p class="text-xs text-muted">SILVER</p></div>
+        <div><p id="bronzeCount" class="text-2xl font-light text-bronze">0</p><p class="text-xs text-muted">BRONZE</p></div>
+        <div><p id="hoursPlayed" class="text-2xl font-light text-white">0</p><p class="text-xs text-muted">HOURS</p></div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button id="wishlistButton" onclick="toggleWishlist()" class="px-4 py-2 rounded bg-raised text-white text-sm hover:bg-accentdk">♡ Add to wishlist</button>
+        <a id="storeLink" href="#" target="_blank" class="px-4 py-2 rounded bg-nav border border-raised text-center text-sm hover:text-white">View on Steam</a>
+      </div>
+    </section>
+
+    <section class="bg-panel border border-raised rounded-lg p-6">
+      <div class="flex gap-2 pb-4 border-b border-raised">
+        <button id="achievementsTab" onclick="showTab('achievements')" class="px-4 py-2 rounded bg-raised text-white font-semibold">Achievements</button>
+        <button id="reviewsTab" onclick="showTab('reviews')" class="px-4 py-2 rounded text-muted font-semibold hover:text-white">Reviews</button>
+      </div>
+
+      <div id="achievementsPanel" class="mt-5">
+        <div class="flex items-center gap-3 text-sm">
+          <div class="flex gap-1 p-1 rounded bg-page border border-raised">
+            <button id="showAll" onclick="setAchFilter('all')" class="px-3 py-1 rounded bg-raised text-white">All</button>
+            <button id="showUnlocked" onclick="setAchFilter('unlocked')" class="px-3 py-1 rounded text-muted hover:text-white">Unlocked</button>
+            <button id="showLocked" onclick="setAchFilter('locked')" class="px-3 py-1 rounded text-muted hover:text-white">Locked</button>
+          </div>
+          <label class="ml-auto text-muted">Sort:</label>
+          <select id="achSort" onchange="renderAchievements()" class="px-3 py-2 rounded bg-page border border-raised text-white">
+            <option value="rarest">Rarest first</option>
+            <option value="common">Most common first</option>
+            <option value="recent">Recently unlocked</option>
+          </select>
+        </div>
+
+        <div id="achievementList" class="mt-4 space-y-2"></div>
+        <p id="achievementEmpty" class="hidden py-8 text-center text-muted"></p>
+      </div>
+
+      <div id="reviewsPanel" class="hidden mt-5 grid grid-cols-2 gap-6">
+
+        <div>
+          <h2 class="font-bold tracking-wide text-white">STEAM REVIEWS</h2>
+          <div id="steamSummary" class="mt-3 p-4 rounded bg-nav border border-raised"></div>
+
+          <div class="mt-3 flex gap-1 p-1 w-fit rounded bg-page border border-raised text-sm">
+            <button id="steamAll" onclick="setSteamFilter('all')" class="px-3 py-1 rounded bg-raised text-white">All</button>
+            <button id="steamPositive" onclick="setSteamFilter('positive')" class="px-3 py-1 rounded text-muted hover:text-white">👍 Positive</button>
+            <button id="steamNegative" onclick="setSteamFilter('negative')" class="px-3 py-1 rounded text-muted hover:text-white">👎 Negative</button>
+          </div>
+
+          <div id="steamReviewList" class="mt-3 space-y-3"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between">
+            <h2 class="font-bold tracking-wide text-white">STEAMTROPHIES REVIEWS</h2>
+            <button id="writeButton" onclick="openReviewModal()" class="px-4 py-2 rounded bg-accent text-nav text-sm font-semibold hover:bg-accent/90">Write a review</button>
+          </div>
+          <div class="mt-3 p-4 rounded bg-nav border border-raised flex items-center gap-4">
+            <p id="averageRating" class="text-3xl font-bold text-white">-</p>
+            <div>
+              <p id="averageStars" class="text-gold text-lg"></p>
+              <p id="reviewCount" class="text-sm text-muted">No reviews yet</p>
+            </div>
+          </div>
+          <div id="appReviewList" class="mt-3 space-y-3"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="border-t border-raised bg-nav">
+    <div class="max-w-7xl mx-auto px-6 py-6 flex justify-between text-sm text-muted">
+      <p>SteamTrophies is a student project powered by the Steam Web API. Not affiliated with Valve Corporation.</p>
+      <div class="flex gap-6">
+        <a href="#" class="hover:text-white">Privacy</a>
+        <a href="#" class="hover:text-white">Status</a>
+      </div>
+    </div>
+  </footer>
+
+  <div id="reviewModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-30" onclick="closeReviewModal()">
+    <div class="w-[32rem] bg-panel border border-raised rounded-lg p-6" onclick="event.stopPropagation()">
+      <h3 class="text-lg font-bold text-white">Your review</h3>
+
+      <p class="mt-4 text-sm text-muted">Rating</p>
+      <div id="starButtons" class="mt-1 flex gap-1 text-3xl"></div>
+
+      <p class="mt-4 text-sm text-muted">Review</p>
+      <textarea id="reviewText" oninput="updateCharCount()" maxlength="2000" rows="6"
+                class="mt-1 w-full p-3 rounded bg-page border border-raised text-white focus:outline-none focus:border-accent"></textarea>
+      <p id="charCount" class="text-right text-xs text-muted">0 / 2000</p>
+
+      <p id="reviewError" class="hidden text-sm text-danger"></p>
+
+      <div class="mt-4 flex justify-end gap-3">
+        <button onclick="closeReviewModal()" class="px-4 py-2 rounded bg-raised">Cancel</button>
+        <button onclick="submitReview()" class="px-4 py-2 rounded bg-accent text-nav font-semibold">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden fixed bottom-6 right-6 px-4 py-3 rounded bg-raised border border-accent text-white shadow-xl"></div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const appId = params.get("appId");
+
+    let game = null;
+
+    let achFilter = "all";
+    let steamFilter = "all";
+
+    let myRating = 0;
+
+
+    function gameImage(id) {
+      return "https://cdn.cloudflare.steamstatic.com/steam/apps/" + id + "/header.jpg";
+    }
+
+    function esc(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(epoch) {
+      return new Date(epoch * 1000).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.remove("hidden");
+      setTimeout(function () { toast.classList.add("hidden"); }, 2500);
+    }
+
+    function toggleUserMenu() {
+      document.getElementById("userMenu").classList.toggle("hidden");
+    }
+
+    function tier(globalPercent) {
+      if (globalPercent == null) return "Bronze";
+      if (globalPercent < 20) return "Gold";
+      if (globalPercent <= 50) return "Silver";
+      return "Bronze";
+    }
+
+    function tierColor(globalPercent) {
+      const t = tier(globalPercent);
+      if (t == "Gold") return "text-gold";
+      if (t == "Silver") return "text-silver";
+      return "text-bronze";
+    }
+
+    function rarityBadge(globalPercent) {
+      if (globalPercent == null) return '<span class="px-2 py-0.5 rounded text-xs text-muted border border-raised">? %</span>';
+      if (globalPercent < 1)  return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-gold border border-gold/50 bg-gold/10">' + globalPercent + '% ULTRA RARE</span>';
+      if (globalPercent < 5)  return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-veryrare border border-veryrare/50 bg-veryrare/10">' + globalPercent + '% VERY RARE</span>';
+      if (globalPercent < 20) return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-accent border border-accent/50 bg-accent/10">' + globalPercent + '% RARE</span>';
+      if (globalPercent <= 50) return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-success border border-success/50 bg-success/10">' + globalPercent + '% UNCOMMON</span>';
+      return '<span class="px-2 py-0.5 rounded text-xs font-semibold text-muted border border-raised">' + globalPercent + '% COMMON</span>';
+    }
+
+    // the global % for sorting (unknown counts as 100, so it goes last)
+    function percentOf(achievement) {
+      if (achievement.globalPercent == null) {
+        return 100;
+      }
+      return achievement.globalPercent;
+    }
+
+    function stars(rating) {
+      let text = "";
+      for (let i = 1; i <= 5; i++) {
+        if (i <= rating) {
+          text += "★";
+        } else {
+          text += "☆";
+        }
+      }
+      return text;
+    }
+
+    async function loadGame() {
+      if (!appId) {
+        document.getElementById("gameName").textContent = "No game picked";
+        return;
+      }
+
+      const response = await fetch("gameData.php?appId=" + appId);
+      game = await response.json();
+
+      if (!game.loggedIn) {
+        window.location.href = "login.html";
+        return;
+      }
+      if (game.error) {
+        document.getElementById("gameName").textContent = game.error;
+        return;
+      }
+
+      document.getElementById("navName").textContent = game.username;
+      renderHeader();
+      renderAchievements();
+      renderSteamReviews();
+      renderAppReviews();
+    }
+
+    function renderHeader() {
+      document.title = "SteamTrophies - " + game.name;
+      document.getElementById("heroImage").src = gameImage(game.appId);
+      document.getElementById("gameName").textContent = game.name;
+      document.getElementById("crumbName").textContent = game.name;
+      document.getElementById("storeLink").href = "https://store.steampowered.com/app/" + game.appId;
+      document.getElementById("hoursPlayed").textContent = game.hoursPlayed;
+
+      let percent = 0;
+      if (game.total > 0) {
+        percent = Math.round(game.unlocked / game.total * 100);
+      }
+      document.getElementById("progressBar").style.width = percent + "%";
+      document.getElementById("progressPercent").textContent = percent + "%";
+
+      if (game.total == 0) {
+        document.getElementById("progressText").textContent = "No achievements saved for this game yet.";
+      } else if (percent == 100) {
+        document.getElementById("progressText").textContent = "Achievements " + game.unlocked + " of " + game.total + " - Platinum! ★";
+        document.getElementById("progressBar").className = "h-2 rounded bg-success";
+      } else {
+        document.getElementById("progressText").textContent = "Achievements " + game.unlocked + " of " + game.total;
+      }
+
+      let gold = 0;
+      let silver = 0;
+      let bronze = 0;
+      for (const a of game.achievements) {
+        if (!a.unlocked) continue;
+        const t = tier(a.globalPercent);
+        if (t == "Gold") gold++;
+        else if (t == "Silver") silver++;
+        else bronze++;
+      }
+      document.getElementById("goldCount").textContent = gold;
+      document.getElementById("silverCount").textContent = silver;
+      document.getElementById("bronzeCount").textContent = bronze;
+
+      renderWishlistButton();
+    }
+
+    function renderWishlistButton() {
+      const button = document.getElementById("wishlistButton");
+      if (game.inWishlist) {
+        button.textContent = "♥ On your wishlist";
+        button.className = "px-4 py-2 rounded bg-accent/20 border border-accent/50 text-accent text-sm";
+      } else {
+        button.textContent = "♡ Add to wishlist";
+        button.className = "px-4 py-2 rounded bg-raised text-white text-sm hover:bg-accentdk";
+      }
+    }
+
+    async function toggleWishlist() {
+      let action = "add";
+      if (game.inWishlist) {
+        action = "remove";
+      }
+
+      const response = await fetch("wishlist.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "action=" + action + "&appId=" + game.appId
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        game.inWishlist = !game.inWishlist;
+        renderWishlistButton();
+        showToast(result.message);
+      } else {
+        showToast(result.message);
+      }
+    }
+
+    function setAchFilter(newFilter) {
+      achFilter = newFilter;
+      const active = "px-3 py-1 rounded bg-raised text-white";
+      const normal = "px-3 py-1 rounded text-muted hover:text-white";
+      document.getElementById("showAll").className = (achFilter == "all") ? active : normal;
+      document.getElementById("showUnlocked").className = (achFilter == "unlocked") ? active : normal;
+      document.getElementById("showLocked").className = (achFilter == "locked") ? active : normal;
+      renderAchievements();
+    }
+
+    function renderAchievements() {
+      const sort = document.getElementById("achSort").value;
+      const empty = document.getElementById("achievementEmpty");
+
+      if (game.achievements.length == 0) {
+        empty.textContent = "No achievements saved for this game. Sync with Steam on your profile first.";
+        empty.classList.remove("hidden");
+        document.getElementById("achievementList").innerHTML = "";
+        return;
+      }
+      empty.classList.add("hidden");
+
+      let list = [];
+      for (const a of game.achievements) {
+        if (achFilter == "unlocked" && !a.unlocked) continue;
+        if (achFilter == "locked" && a.unlocked) continue;
+        list.push(a);
+      }
+
+      if (sort == "rarest") list.sort(function (a, b) { return percentOf(a) - percentOf(b); });
+      if (sort == "common") list.sort(function (a, b) { return percentOf(b) - percentOf(a); });
+      if (sort == "recent") list.sort(function (a, b) { return b.unlockTime - a.unlockTime; });
+
+      let html = "";
+      for (const a of list) {
+        let icon = a.icon;
+        let rowStyle = "bg-success/5 border-success/30";
+        let status = '<span class="text-success">Unlocked ' + formatDate(a.unlockTime) + '</span>';
+        if (!a.unlocked) {
+          icon = a.iconLocked;
+          rowStyle = "bg-nav border-raised opacity-80";
+          status = '<span class="text-muted">🔒 Locked</span>';
+        }
+
+        let iconHtml = '<div class="w-12 h-12 rounded bg-raised flex items-center justify-center text-muted">?</div>';
+        if (icon) {
+          iconHtml = '<img src="' + icon + '" alt="" class="w-12 h-12 rounded">';
+        }
+
+        html += `
+          <div class="flex items-center gap-4 p-3 rounded border ${rowStyle}">
+            ${iconHtml}
+            <div class="flex-1">
+              <p class="font-semibold text-white">${esc(a.name)}</p>
+              <p class="text-sm text-muted">${esc(a.description)}</p>
+            </div>
+            <div class="text-right text-sm">
+              <div>${rarityBadge(a.globalPercent)}</div>
+              <p class="mt-1">${status} · <span class="${tierColor(a.globalPercent)}">${tier(a.globalPercent)}</span></p>
+            </div>
+          </div>`;
+      }
+
+      if (list.length == 0) {
+        html = '<p class="py-8 text-center text-muted">Nothing to show here.</p>';
+      }
+      document.getElementById("achievementList").innerHTML = html;
+    }
+
+    function showTab(tab) {
+      const active = "px-4 py-2 rounded bg-raised text-white font-semibold";
+      const normal = "px-4 py-2 rounded text-muted font-semibold hover:text-white";
+      document.getElementById("achievementsTab").className = (tab == "achievements") ? active : normal;
+      document.getElementById("reviewsTab").className = (tab == "reviews") ? active : normal;
+
+      if (tab == "achievements") {
+        document.getElementById("achievementsPanel").classList.remove("hidden");
+        document.getElementById("reviewsPanel").classList.add("hidden");
+      } else {
+        document.getElementById("achievementsPanel").classList.add("hidden");
+        document.getElementById("reviewsPanel").classList.remove("hidden");
+      }
+    }
+
+    function setSteamFilter(newFilter) {
+      steamFilter = newFilter;
+      const active = "px-3 py-1 rounded bg-raised text-white";
+      const normal = "px-3 py-1 rounded text-muted hover:text-white";
+      document.getElementById("steamAll").className = (steamFilter == "all") ? active : normal;
+      document.getElementById("steamPositive").className = (steamFilter == "positive") ? active : normal;
+      document.getElementById("steamNegative").className = (steamFilter == "negative") ? active : normal;
+      renderSteamReviews();
+    }
+
+    function renderSteamReviews() {
+      const summary = document.getElementById("steamSummary");
+      const list = document.getElementById("steamReviewList");
+
+      if (game.steamReviews == null) {
+        summary.innerHTML = '<p class="text-muted">Steam reviews are not available right now.</p>';
+        list.innerHTML = "";
+        return;
+      }
+
+      const sr = game.steamReviews;
+      let percent = 0;
+      if (sr.total > 0) {
+        percent = Math.round(sr.positive / sr.total * 100);
+      }
+      summary.innerHTML = `
+        <p class="text-lg font-bold text-accent">${esc(sr.scoreText)}</p>
+        <p class="text-sm text-muted">${percent}% of ${sr.total} Steam reviews are positive</p>
+        <div class="mt-2 h-1.5 rounded bg-danger/60"><div class="h-1.5 rounded bg-success" style="width:${percent}%"></div></div>`;
+
+      let html = "";
+      for (const r of sr.reviews) {
+        if (steamFilter == "positive" && !r.recommended) continue;
+        if (steamFilter == "negative" && r.recommended) continue;
+
+        let verdict = '<span class="text-success font-semibold">👍 Recommended</span>';
+        if (!r.recommended) {
+          verdict = '<span class="text-danger font-semibold">👎 Not recommended</span>';
+        }
+
+        html += `
+          <div class="p-4 rounded bg-nav border border-raised">
+            <div class="flex justify-between text-sm">
+              ${verdict}
+              <span class="text-muted">${r.hoursPlayed} hrs · ${formatDate(r.postedAt)}</span>
+            </div>
+            <p class="mt-2 text-sm text-text line-clamp-3 whitespace-pre-line">${esc(r.text)}</p>
+            <button onclick="this.previousElementSibling.classList.toggle('line-clamp-3')" class="mt-1 text-xs text-accent hover:text-white">Read more</button>
+          </div>`;
+      }
+
+      if (html == "") {
+        html = '<p class="py-6 text-center text-muted">No reviews to show.</p>';
+      }
+      list.innerHTML = html;
+    }
+
+    function renderAppReviews() {
+      const reviews = game.reviews;
+
+      if (reviews.length == 0) {
+        document.getElementById("averageRating").textContent = "-";
+        document.getElementById("averageStars").textContent = "";
+        document.getElementById("reviewCount").textContent = "No reviews yet. Be the first!";
+      } else {
+        let total = 0;
+        for (const r of reviews) {
+          total += r.rating;
+        }
+        const average = Math.round(total / reviews.length * 10) / 10;
+        document.getElementById("averageRating").textContent = average;
+        document.getElementById("averageStars").textContent = stars(Math.round(average));
+        document.getElementById("reviewCount").textContent = reviews.length + " review(s) from SteamTrophies users";
+      }
+
+      let hasMine = false;
+      for (const r of reviews) {
+        if (r.isMine) hasMine = true;
+      }
+      if (hasMine) {
+        document.getElementById("writeButton").textContent = "Edit my review";
+      } else {
+        document.getElementById("writeButton").textContent = "Write a review";
+      }
+
+      let html = "";
+      for (const r of reviews) {
+        let myButtons = "";
+        if (r.isMine) {
+          myButtons = `
+            <div class="flex gap-3 text-xs">
+              <button onclick="openReviewModal()" class="text-accent hover:text-white">Edit</button>
+              <button onclick="deleteReview()" class="text-danger hover:text-white">Delete</button>
+            </div>`;
+        }
+
+        html += `
+          <div class="p-4 rounded bg-nav border border-raised">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-raised flex items-center justify-center text-sm text-white">${esc(r.username.charAt(0).toUpperCase())}</div>
+                <div>
+                  <p class="text-sm font-semibold text-white">${esc(r.username)}</p>
+                  <p class="text-xs text-muted">${formatDate(r.createdAt)}</p>
+                </div>
+              </div>
+              <span class="text-gold">${stars(r.rating)}</span>
+            </div>
+            <p class="mt-2 text-sm text-text whitespace-pre-line">${esc(r.text)}</p>
+            ${myButtons}
+          </div>`;
+      }
+      document.getElementById("appReviewList").innerHTML = html;
+    }
+    async function reloadReviews() {
+      const response = await fetch("reviews.php?appId=" + game.appId);
+      const result = await response.json();
+      if (result.success) {
+        game.reviews = result.reviews;
+        renderAppReviews();
+      }
+    }
+
+    function openReviewModal() {
+      myRating = 0;
+      document.getElementById("reviewText").value = "";
+      for (const r of game.reviews) {
+        if (r.isMine) {
+          myRating = r.rating;
+          document.getElementById("reviewText").value = r.text;
+        }
+      }
+      document.getElementById("reviewError").classList.add("hidden");
+      drawStarButtons();
+      updateCharCount();
+      document.getElementById("reviewModal").classList.remove("hidden");
+    }
+
+    function closeReviewModal() {
+      document.getElementById("reviewModal").classList.add("hidden");
+    }
+
+    function drawStarButtons() {
+      let html = "";
+      for (let i = 1; i <= 5; i++) {
+        let color = "text-raised";
+        if (i <= myRating) {
+          color = "text-gold";
+        }
+        html += '<button onclick="setRating(' + i + ')" class="' + color + ' hover:text-gold">★</button>';
+      }
+      document.getElementById("starButtons").innerHTML = html;
+    }
+
+    function setRating(rating) {
+      myRating = rating;
+      drawStarButtons();
+    }
+
+    function updateCharCount() {
+      const length = document.getElementById("reviewText").value.length;
+      document.getElementById("charCount").textContent = length + " / 2000";
+    }
+
+    async function submitReview() {
+      const text = document.getElementById("reviewText").value;
+      const error = document.getElementById("reviewError");
+
+      if (myRating == 0) {
+        error.textContent = "Pick a rating from 1 to 5 stars.";
+        error.classList.remove("hidden");
+        return;
+      }
+
+      const response = await fetch("reviews.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "action=save&appId=" + game.appId + "&rating=" + myRating + "&text=" + encodeURIComponent(text)
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        closeReviewModal();
+        showToast("Review saved");
+        reloadReviews();
+      } else {
+        error.textContent = result.message;
+        error.classList.remove("hidden");
+      }
+    }
+
+    async function deleteReview() {
+      const response = await fetch("reviews.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "action=delete&appId=" + game.appId
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        showToast("Review deleted");
+        reloadReviews();
+      } else {
+        showToast(result.message);
+      }
+    }
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key == "Escape") closeReviewModal();
+    });
+
+    loadGame();
+  </script>
+</body>
+</html>
