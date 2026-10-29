@@ -870,6 +870,101 @@ function doBrowseGames($sessionId, $search, $ownedOnly, $sort, $page)
     $data['games'] = $games;
     return $data;
 }
+// saves the logged in user's rating (1 to 5 stars) and review for one game, or updates it if they already wrote one
+function doSaveReview($sessionId, $appId, $rating, $text)
+{
+    $mydb = connectDB();
+    $mydb->set_charset("utf8mb4"); //so emojis and accents save correctly
+
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+    if ($rating < 1 || $rating > 5)
+    {
+        return "Pick a rating from 1 to 5 stars.";
+    }
+
+    $text = trim($text);
+    if (preg_match('/^.{0,2000}/su', $text, $match)) //same 2000 character limit as the page
+    {
+        $text = $match[0];
+    }
+
+    //the game has to be in our games table first
+    $stmt = $mydb->prepare("SELECT app_id FROM games WHERE app_id = ?");
+    $stmt->bind_param("i", $appId);
+    $stmt->execute();
+    if ($stmt->get_result()->num_rows == 0)
+    {
+        return "game not found";
+    }
+
+    $now = time();
+    $stmt = $mydb->prepare("INSERT INTO user_reviews (user_id, app_id, rating, review_text, created_at, updated_at)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE rating = ?, review_text = ?, updated_at = ?");
+    $stmt->bind_param("iiisiiisi", $userId, $appId, $rating, $text, $now, $now, $rating, $text, $now);
+    $stmt->execute();
+
+    return true;
+}
+
+// deletes the logged in user's review for one game
+function doDeleteReview($sessionId, $appId)
+{
+    $mydb = connectDB();
+
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return "session invalid";
+    }
+
+    $stmt = $mydb->prepare("DELETE FROM user_reviews WHERE user_id = ? AND app_id = ?");
+    $stmt->bind_param("ii", $userId, $appId);
+    $stmt->execute();
+
+    return true;
+}
+
+// gets every user's review for one game (newest first) and marks the logged in user's own
+function doGetReviews($sessionId, $appId)
+{
+    $mydb = connectDB();
+    $mydb->set_charset("utf8mb4");
+
+    $userId = getUserIdFromSession($sessionId);
+    if ($userId === false)
+    {
+        return false;
+    }
+
+    $stmt = $mydb->prepare("SELECT users.username, user_reviews.user_id, user_reviews.rating, user_reviews.review_text, user_reviews.created_at
+                            FROM user_reviews
+                            JOIN users ON users.id = user_reviews.user_id
+                            WHERE user_reviews.app_id = ?
+                            ORDER BY user_reviews.created_at DESC");
+    $stmt->bind_param("i", $appId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $reviews = array();
+    while ($row = $result->fetch_assoc())
+    {
+        $reviews[] = array(
+            "username"  => $row['username'],
+            "rating"    => (int)$row['rating'],
+            "text"      => (string)$row['review_text'],
+            "createdAt" => (int)$row['created_at'],
+            "isMine"    => ((int)$row['user_id'] == (int)$userId)
+        );
+    }
+
+    return $reviews;
+}
+
 function handleRequest($request)
 {
   echo "received request".PHP_EOL;
@@ -988,6 +1083,27 @@ function handleRequest($request)
         return array("success" => true, "message" => "library loaded", "games" => $result);
       }
       return array("success" => false, "message" => $result);
+    case "save_review":
+      $result = doSaveReview($request['sessionId'] ?? '', intval($request['appId'] ?? 0), intval($request['rating'] ?? 0), (string)($request['text'] ?? ''));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "review saved");
+      }
+      return array("success" => false, "message" => $result);
+    case "delete_review":
+      $result = doDeleteReview($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($result === true)
+      {
+        return array("success" => true, "message" => "review deleted");
+      }
+      return array("success" => false, "message" => $result);
+    case "get_reviews":
+      $reviews = doGetReviews($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
+      if ($reviews === false)
+      {
+        return array("success" => false, "message" => "session invalid");
+      }
+      return array("success" => true, "message" => "reviews loaded", "reviews" => $reviews);
     case "add_wishlist":
       $result = doAddWishlist($request['sessionId'] ?? '', intval($request['appId'] ?? 0));
       if ($result === true)
