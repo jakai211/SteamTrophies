@@ -15,19 +15,19 @@ require_once('steamConfig.php');   // defines STEAM_API_KEY (this file is NOT pu
 // Returns false if the request failed.
 function steamGet($url)
 {
-    $ch = curl_init($url);                          // start a web request
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // give us the reply as text instead of printing it
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 15);          // give up after 15 seconds
-    $body = curl_exec($ch);                         // run the request
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);  // 200 means OK
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    $body = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
 
     if ($body === false || $code != 200)
     {
         return false;
     }
-    $data = json_decode($body, true);                // turn the JSON text into an array
+    $data = json_decode($body, true);
     return is_array($data) ? $data : false;
 }
 
@@ -333,8 +333,66 @@ function getRecentPlaytime($user)
     );
 }
 
+// Checks with Steam that a "Sign in through Steam" login is real and returns the 17-digit SteamID.
+function verifySteamLogin($params)
+{
+    if (!is_array($params))
+    {
+        return array("returnCode" => '0', "message" => "Not a Steam login");
+    }
+
+    // PHP turns "openid.mode" into "openid_mode" in $_GET, so convert those keys back
+    $openid = array();
+    foreach ($params as $key => $value)
+    {
+        $key = (string)$key;
+        if (strpos($key, "openid_") === 0)
+        {
+            $key = "openid." . substr($key, 7);
+        }
+        if (strpos($key, "openid.") === 0 && is_string($value))
+        {
+            $openid[$key] = $value;
+        }
+    }
+
+    if (($openid['openid.mode'] ?? "") != "id_res")
+    {
+        return array("returnCode" => '0', "message" => "Not a Steam login");
+    }
+    if (($openid['openid.op_endpoint'] ?? "") != "https://steamcommunity.com/openid/login")
+    {
+        return array("returnCode" => '0', "message" => "Not from Steam");
+    }
+
+    // claimed_id looks like https://steamcommunity.com/openid/id/76561198000000000
+    if (!preg_match('#^https://steamcommunity\.com/openid/id/([0-9]{17})$#', $openid['openid.claimed_id'] ?? "", $match))
+    {
+        return array("returnCode" => '0', "message" => "No Steam ID found");
+    }
+    $steamId = $match[1];
+
+    // send everything back to Steam and ask "is this real?"
+    $openid['openid.mode'] = "check_authentication";
+    $ch = curl_init("https://steamcommunity.com/openid/login");
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($openid));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    $answer = curl_exec($ch);
+    curl_close($ch);
+
+    // Steam answers with "is_valid:true" if the login is real
+    if ($answer === false || !preg_match('/^is_valid:true\s*$/m', $answer))
+    {
+        return array("returnCode" => '0', "message" => "Steam did not confirm the login");
+    }
+
+    return array("returnCode" => '1', "steamId" => $steamId);
+}
+
 // RabbitMQ calls this for every message that arrives.
-// $request is the array that the web server (or a test client) sent.
 function requestProcessor($request)
 {
     if (!is_array($request) ||
@@ -345,7 +403,6 @@ function requestProcessor($request)
     }
     echo "received request: " . $request['type'] . PHP_EOL;
 
-    // pick what to do based on the message "type"
     try
     {
         switch ($request['type'])
@@ -368,6 +425,9 @@ function requestProcessor($request)
             case "get_achievement_definitions":
                 return getAchievementDefinitions($request['appId'] ?? 0);
 
+            case "verify_steam_login":
+                return verifySteamLogin($request['params'] ?? array());
+
             case "get_recent_playtime":
                 return getRecentPlaytime($request['user'] ?? "");
         }
@@ -384,6 +444,6 @@ function requestProcessor($request)
 $server = new rabbitMQServer("dmzRabbitMQ.ini", "dmzServer");
 
 echo "steamProcessor BEGIN".PHP_EOL;
-$server->process_requests('requestProcessor');   // wait for messages forever
+$server->process_requests('requestProcessor');
 echo "steamProcessor END".PHP_EOL;
 exit();
