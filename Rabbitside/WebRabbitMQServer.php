@@ -21,6 +21,13 @@ function requestProcessor($request) {
         case "remove_wishlist":
         case "set_wishlist_notify":
         case "get_wishlist":
+        case "get_steam_profile":
+        case "get_steam_library":
+        case "get_steam_achievements":
+        case "save_steam_profile":
+        case "save_steam_library":
+        case "save_steam_recent":
+        case "save_steam_achievements":
         case "logout":
             $client = new rabbitMQClient ("databaseRabbitMQ.ini", "databaseServer");
 
