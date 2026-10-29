@@ -84,6 +84,18 @@
       </div>
     </section>
 
+    <!-- ===== ADD A GAME (searches the game catalog) ===== -->
+    <section class="bg-panel border border-raised rounded-lg p-4">
+      <p class="text-sm font-semibold text-white">Add a game to your wishlist</p>
+      <div class="mt-3 flex items-center gap-4">
+        <input id="catalogSearch" onkeydown="catalogKey(event)" type="text" placeholder="Type a game name, like Portal..."
+               class="flex-1 px-4 py-2 rounded bg-page border border-raised text-white placeholder-text/70 focus:outline-none focus:border-accent">
+        <button onclick="searchCatalog()" class="px-5 py-2 rounded font-semibold text-white bg-gradient-to-r from-accentdk to-accent hover:opacity-90">Search</button>
+      </div>
+      <!-- the search results go here -->
+      <div id="catalogResults" class="mt-3 space-y-2"></div>
+    </section>
+
     <section class="bg-panel border border-raised rounded-lg p-4 flex items-center gap-4">
       <input id="search" oninput="renderWishlist()" type="text" placeholder="Search by game title or AppID..."
              class="flex-1 px-4 py-2 rounded bg-page border border-raised text-white placeholder-text/70 focus:outline-none focus:border-accent">
@@ -295,7 +307,7 @@
       renderWishlist();
     }
 
-x    async function toggleNotify(appId) {
+    async function toggleNotify(appId) {
       for (const item of items) {
         if (item.app_id == appId) {
           let newValue = 1;
@@ -339,6 +351,78 @@ x    async function toggleNotify(appId) {
       if (result.success) {
         showToast("Removed from wishlist");
         loadWishlist(); 
+      } else {
+        showToast(result.message);
+      }
+    }
+    function catalogKey(event) {
+      if (event.key == "Enter") {
+        searchCatalog();
+      }
+    }
+    async function searchCatalog() {
+      const text = document.getElementById("catalogSearch").value.trim();
+      const box = document.getElementById("catalogResults");
+
+      if (text == "") {
+        box.innerHTML = "";
+        return;
+      }
+      box.innerHTML = '<p class="text-sm text-muted">Searching...</p>';
+
+      try {
+        const response = await fetch("browse.php?search=" + encodeURIComponent(text) + "&owned=0&sort=name&page=1");
+        const result = await response.json();
+
+        if (!result.success) {
+          box.innerHTML = '<p class="text-sm text-danger">Could not search games right now.</p>';
+          return;
+        }
+        if (result.games.length == 0) {
+          box.innerHTML = '<p class="text-sm text-muted">No games found.</p>';
+          return;
+        }
+        let html = "";
+        let count = 0;
+        for (const game of result.games) {
+          if (count == 8) {
+            break;
+          }
+          count++;
+
+          //checks if this game is already on the wishlist
+          let onList = false;
+          for (const item of items) {
+            if (Number(item.app_id) == game.appId) {
+              onList = true;
+            }
+          }
+
+          let button = '<button onclick="addFromCatalog(' + game.appId + ')" class="px-3 py-1 rounded bg-raised text-sm text-white hover:bg-accentdk">+ Add</button>';
+          if (onList) {
+            button = '<span class="px-3 py-1 text-sm text-success">&#10003; On your wishlist</span>';
+          }
+
+          html += `
+            <div class="flex items-center gap-4 p-2 rounded bg-page border border-raised">
+              <img src="${gameImage(game.appId)}" alt="" class="w-24 h-11 rounded object-cover bg-raised" onerror="this.style.visibility='hidden'">
+              <p class="flex-1 text-white truncate">${esc(game.name)}</p>
+              ${button}
+            </div>`;
+        }
+        box.innerHTML = html;
+      } catch (error) {
+        box.innerHTML = '<p class="text-sm text-danger">Could not search games right now.</p>';
+      }
+    }
+
+    // adds a game from the search results
+    async function addFromCatalog(appId) {
+      const result = await sendWishlist("action=add&appId=" + appId);
+      if (result.success) {
+        showToast("Added to wishlist");
+        await loadWishlist();  
+        searchCatalog();       
       } else {
         showToast(result.message);
       }
