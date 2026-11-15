@@ -63,6 +63,8 @@ function makeSession($username)
 
     return $token;//return the token so the rest of it can be used
 }
+// adding 2fa for email code
+
 
 // need to create a register function because we have one :/
 function doRegister($firstName,$lastName,$email,$username,$password) //replaced to add first and last names and email that we did not do for auth
