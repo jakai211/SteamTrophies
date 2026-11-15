@@ -13,6 +13,8 @@ function requestProcessor($request) {
 
     switch ($request['type']) {
         case "login":
+	case "send_2fa_code":	// For 2fa deliverable - Divya
+	case "verify_2fa_code": // For 2fa deliverable - DIvya
         case "register":
         case "validate_session":
         case "link_steam":
