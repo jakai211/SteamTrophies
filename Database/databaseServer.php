@@ -1082,10 +1082,22 @@ function handleRequest($request)
     case "login":
       if (doLogin($request['username'],$request['password']))
       {
-        $token = makeSession($request['username']);
-        return array("success" => true, "message" => "login ok", "token" => $token);
+	// if the password is right they still need the email code, so calling pendingLogin for now 
+	$pending = pendingLogin($request['username']);
+	if ($pending === false)
+	{
+	 return array("success" => false, "message" => "login failed");
+	}
+	return array("success" => true, "message" => "code needed", "pending" => true, "pendingToken" => $pending);
+        // $token = makeSession($request['username']);
+        //return array("success" => true, "message" => "login ok", "token" => $token);
       }
       return array("success" => false, "message" => "wrong username or password");
+	// adding the new cases for 2fa send and verify
+    case "send_2fa_code":
+      return makeCode($request['pendingToken'] ?? '');
+    case "verify_2fa_code":
+      return checkCode($request['pendingToken'] ?? '', $request['code'] ?? '');
     case "register": //added a case to register
       $result = doRegister( //seperating it instead of putting it all in one if statement now were going to use result to store this
         $request['first_name'] ?? '',
