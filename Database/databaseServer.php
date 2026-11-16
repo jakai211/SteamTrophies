@@ -63,8 +63,110 @@ function makeSession($username)
 
     return $token;//return the token so the rest of it can be used
 }
-// adding 2fa for email code
+// adding 2fa for email code login
+//Divya
 
+function pendingLogin($username)
+{
+    $username = trim($username);
+    $mydb = connectDB();
+    $now = time();
+    $stmt = $mydb->prepare("DELETE FROM 2fa WHERE expires_at <= ?");
+    $stmt->bind_param("i", $now);
+    $stmt->execute();
+    $stmt = $mydb->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $user = $stmt->get_result()->fetch_assoc();
+    if (!$user)
+    {
+     return false;
+    }
+
+    $stmt = $mydb->prepare("DELETE FROM 2fa WHERE user_id = ?");
+    $stmt->bind_param("i", $user['id']);
+    $stmt->execute();
+    $token = bin2hex(random_bytes(32));
+    $expires = $now + 900; // gives the users 15 minutes to finish logging in
+
+    $stmt = $mydb->prepare("INSERT INTO 2fa (token, user_id, expires_at) VALUES (?, ?, ?)");
+    $stmt->bind_param("sii", $token, $user['id'], $expires);
+    $stmt->execute();
+
+    return $token;
+}
+// Divya
+function makeCode($pendingToken)
+{
+    $mydb = connectDB();
+    $now = time();
+
+    $stmt = $mydb->prepare("SELECT c.last_sent_at, u.email 2fa c JOIN users u ON u.id = c.user_id WHERE c.token = ? AND c.expires_at > ?");
+    $stmt->bind_param("si", $pendingToken, $now);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    if (!$row)
+    {
+     return array("success" => false, "message" => "Login expired. Please sign in again.");
+    }
+
+    // adding wait time here so use cannot spam the button for codes
+    $wait = 60 - ($now - (int)$row['last_sent_at']);
+    if ($wait > 0)
+    {
+     return array("success" => false, "message" => "Please wait " . $wait . " seconds before asking for another code.");
+    }
+
+    $code = str_pad((string)random_int(0, 999999), 6, "0", STR_PAD_LEFT); // keeps the leading zeros
+    $codeExpires = $now + 600; // now we make the code last 10 minutes
+
+    $stmt = $mydb->prepare("UPDATE 2fa SET code = ?, code_expires_at = ?, last_sent_at = ?, attempts = 0 WHERE token = ?");
+    $stmt->bind_param("siis", $code, $codeExpires, $now, $pendingToken);
+    $stmt->execute();
+
+    return array("success" => true, "message" => "code made", "code" => $code, "email" => $row['email']);
+}
+//Divya
+function checkCode($pendingToken, $code)
+{
+    $mydb = connectDB();
+    $now = time();
+    // limiting attempts to 5 so user can't just keep guessing
+    $stmt = $mydb->prepare("UPDATE 2fa SET attempts = attempts + 1 WHERE token = ? AND expires_at > ? AND attempts < 5");
+    $stmt->bind_param("si", $pendingToken, $now);
+    $stmt->execute();
+    if ($stmt->affected_rows != 1)
+    {
+     return array("success" => false, "message" => "Too many tries or login expired. Please sign in again.");
+    }
+
+    $stmt = $mydb->prepare("SELECT c.code, c.code_expires_at, u.username FROM 2fa c JOIN users u ON u.id = c.user_id WHERE c.token = ?");
+    $stmt->bind_param("s", $pendingToken);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+
+    if (!$row || $row['code'] === null || (int)$row['code_expires_at'] <= $now)
+    {
+     return array("success" => false, "message" => "That code has expired. Send a new one.");
+    }
+
+    if ($row['code'] !== (string)$code)
+    {
+     return array("success" => false, "message" => "Wrong code.");
+    }
+
+    // deleting it, so the code can only be used one time
+    $stmt = $mydb->prepare("DELETE FROM 2fa WHERE token = ?");
+    $stmt->bind_param("s", $pendingToken);
+    $stmt->execute();
+    if ($stmt->affected_rows != 1)
+    {
+     return array("success" => false, "message" => "That code was already used.");
+    }
+
+    $token = makeSession($row['username']);
+    return array("success" => true, "message" => "login ok", "token" => $token);
+}
 
 // need to create a register function because we have one :/
 function doRegister($firstName,$lastName,$email,$username,$password) //replaced to add first and last names and email that we did not do for auth
