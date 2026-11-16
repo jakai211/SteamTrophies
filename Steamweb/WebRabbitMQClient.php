@@ -53,20 +53,24 @@ $response = $client->send_request($request);
 
 if ($type == "login")
 {
-    if (isset($response['success'], $response['token']) &&
+//Divya
+//if password was right the db gives pending token instead of session right away, real session will come after the code is verfied from
+//verifyCode.php
+    if (isset($response['success'], $response['pendingToken']) &&
         $response['success'] === true &&
-        is_string($response['token']) &&
-        $response['token'] !== "")
+        is_string($response['pendingToken']) &&
+        $response['pendingToken'] !== "")
     {
-        setcookie("session_token", $response['token'], array(
-            "path" => "/",
+        setcookie("pending_token", $response['pendingToken'], array(
+            "expires" => time() + 900, //15 minutes
+	    "path" => "/",
             "httponly" => true,
             "samesite" => "Lax",
             "secure" => !empty($_SERVER['HTTPS']) &&
                         $_SERVER['HTTPS'] !== "off"
         ));
 
-        header("Location: profile.html");
+        header("Location: login.html?step=code");
         exit();
     }
 

@@ -29,7 +29,7 @@
       <div class="h-1 bg-gradient-to-r from-accentdk to-accent"></div>
 
       <div class="px-7 pb-8">
-        <div class="flex border-b border-raised">
+        <div id="tabBar" class="flex border-b border-raised">
           <button id="signinTab" type="button" onclick="showTab('signin')"
                   class="flex-1 py-5 text-center font-semibold text-white border-b-2 border-accent">Sign In</button>
           <button id="registerTab" type="button" onclick="showTab('register')"
@@ -129,6 +129,32 @@
             <a href="#" onclick="showTab('signin'); return false;" class="ml-1 font-semibold text-accent underline hover:text-white">Sign in</a>
           </div>
         </form>
+	<div id="codePanel" class="hidden mt-8">
+          <h2 class="text-3xl font-bold text-white">Check Your Email</h2>
+          <p class="mt-2 text-muted">Correct password. Click the button and we will email you a 6 digit code to finish signing in.</p>
+
+          <button id="sendCodeBtn" type="button" onclick="sendCode()"
+                  class="mt-7 w-full py-3 rounded font-semibold text-white bg-raised border border-raised hover:border-accent disabled:opacity-50">
+            Send me a code
+          </button>
+
+          <form id="codeForm" onsubmit="return checkCode(event)">
+            <label for="codeInput" class="block mt-7 mb-2 text-sm font-semibold tracking-wider text-muted">6 DIGIT CODE</label>
+            <input id="codeInput" name="code" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456"
+                   class="w-full px-4 py-3 rounded bg-page border border-raised text-white text-center text-2xl tracking-widest font-mono placeholder-text/70 focus:outline-none focus:border-accent">
+
+            <p id="codeMessage" class="hidden mt-3 text-sm"></p>
+
+            <button type="submit"
+                    class="mt-6 w-full py-3 rounded font-semibold text-white bg-gradient-to-r from-accentdk to-accent hover:opacity-90">
+              Verify and Sign In
+            </button>
+          </form>
+
+          <div class="mt-8 pt-6 border-t border-raised text-center text-muted">
+            <a href="login.html" class="font-semibold text-accent underline hover:text-white">Back to sign in</a>
+          </div>
+        </div>
       </div>
     </div>
   </main>
