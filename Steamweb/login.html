@@ -229,6 +229,85 @@
     if (params.get("registered") == "success") {
       document.getElementById("successBanner").classList.remove("hidden");
     }
+//Divya, 2fa code step, after pass is right user gets sent here
+     if (params.get("step") == "code") {
+      	document.getElementById("tabBar").classList.add("hidden");
+      	document.getElementById("signinForm").classList.add("hidden");
+      	document.getElementById("registerForm").classList.add("hidden");
+      	document.getElementById("codePanel").classList.remove("hidden");
+      }
+
+      function showCodeMessage(text, good) {
+      	const box = document.getElementById("codeMessage");
+      	box.textContent = text;
+      	box.className = "mt-3 text-sm " + (good ? "text-success" : "text-danger");
+       }
+
+      // the Send me a code button, asks sendCode.php to email the code
+      async function sendCode() {
+      	const button = document.getElementById("sendCodeBtn");
+      	button.disabled = true;
+      	showCodeMessage("Sending...", true);
+
+      	try {
+           const response = await fetch("sendCode.php", { method: "POST" });
+           const result = await response.json();
+           showCodeMessage(result.message, result.success);
+
+          if (result.success) {
+             startCooldown(button, 60);
+             return;
+         }
+      }   catch (error) {
+          showCodeMessage("Could not send the code, try again.", false);
+      }
+         button.disabled = false;
+    }
+
+    // keeps the button disabled and counts down so it matches the server wait
+      function startCooldown(button, seconds) {
+         let left = seconds;
+         button.textContent = "Send again in " + left + "s";
+         const timer = setInterval(function () {
+         left--;
+         if (left <= 0) {
+            clearInterval(timer);
+            button.textContent = "Send a new code";
+            button.disabled = false;
+        }   else {
+            button.textContent = "Send again in " + left + "s";
+        }
+      }, 1000);
+    }
+
+    // now send code to verifyCode.php, goes to the profile if its right
+       async function checkCode(event) {
+          event.preventDefault();
+          const code = document.getElementById("codeInput").value.trim();
+
+          if (!/^[0-9]{6}$/.test(code)) {
+             showCodeMessage("Enter the 6 digit code.", false);
+             return false;
+          }
+
+         try {
+             const response = await fetch("verifyCode.php", {
+               method: "POST",
+               headers: { "Content-Type": "application/x-www-form-urlencoded" },
+               body: "code=" + encodeURIComponent(code)
+          });
+        const result = await response.json();
+
+        if (result.success) {
+          window.location.href = "profile.html";
+          return false;
+        }
+        showCodeMessage(result.message, false);
+      } catch (error) {
+        showCodeMessage("Could not check the code, try again.", false);
+      }
+      return false;
+    }
   </script>
 </body>
 </html>
