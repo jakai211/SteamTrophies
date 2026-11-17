@@ -16,6 +16,7 @@ function sendMail ($to,$subject,$body)
 	{
 	$mail->isSMTP();
 	$mail->Host = 'smtp.gmail.com';
+	$mail->SMTPAuth = true;
 	$mail->Username =  "viralsphere9@gmail.com";
 	$mail->Password = "vpybjodyieylpagl";  // rotating password
 	$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
