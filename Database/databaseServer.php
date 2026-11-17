@@ -101,7 +101,7 @@ function makeCode($pendingToken)
     $mydb = connectDB();
     $now = time();
 
-    $stmt = $mydb->prepare("SELECT c.last_sent_at, u.email 2fa c JOIN users u ON u.id = c.user_id WHERE c.token = ? AND c.expires_at > ?");
+    $stmt = $mydb->prepare("SELECT c.last_sent_at, u.email FROM 2fa c JOIN users u ON u.id = c.user_id WHERE c.token = ? AND c.expires_at > ?");
     $stmt->bind_param("si", $pendingToken, $now);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
