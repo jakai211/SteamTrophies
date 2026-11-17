@@ -19,6 +19,8 @@ function doLogin($username,$password)
     $stmt->bind_param("s", $username);     // using the real $username var into that "?" placeholder as a string ("s").
     $stmt->execute();     // Run it
     $user = $stmt->get_result()->fetch_assoc(); // Grab the result from db and turn the user's data into a list.
+    error_log("Login user found: " . ($user ? "YES" : "NO"));	
+    error_log("Password verified: " . (password_verify($password, $user['password_hash']) ? "YES" : "NO"));	
 
     // check password - also included the username just to make sure
     if ($user && password_verify($password, $user['password_hash'])) //both have to be correct
