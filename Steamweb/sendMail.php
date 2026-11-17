@@ -17,7 +17,7 @@ function sendMail ($to,$subject,$body)
 	$mail->isSMTP();
 	$mail->Host = 'smtp.gmail.com';
 	$mail->Username =  "viralsphere9@gmail.com";
-	$mail->Password = "vpyb jody ieyl pagl";  // rotating password
+	$mail->Password = "vpybjodyieylpagl";  // rotating password
 	$mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
 	$mail->Port = 587;
 	$mail->setFrom("viralsphere9@gmail.com", "SteamTrophies");
@@ -35,3 +35,4 @@ function sendMail ($to,$subject,$body)
 	return false;
 	}
 }
+
