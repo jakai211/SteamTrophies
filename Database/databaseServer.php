@@ -5,6 +5,7 @@ require_once('get_host_info.inc');
 require_once('rabbitMQLib.inc');
 require_once('databaseConnection.php');  // gives us connectDB() that will be used for most of the functions
 require_once('globalCatalog.php');
+require_once('gamePrices.php'); // Ahbab: game prices
 
 
 function doLogin($username,$password)
@@ -1260,6 +1261,11 @@ function handleRequest($request)
         return $result;
       }
       return array("success" => false, "message" => $result);
+
+    case "get_games_due_for_prices":
+    case "save_game_prices":
+    case "get_game_prices":
+      return handleGamePrices($request);
 
     case "save_game_catalog":
     case "get_global_games_due":

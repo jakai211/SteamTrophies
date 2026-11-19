@@ -452,8 +452,6 @@ function getSteamReviews($appId)
     );
 }
 
-// RabbitMQ calls this for every message that arrives.
-
 // Global achievement definitions and rarity for one game.
 // This request does not need a player or website session.
 function getGlobalGameData($appId)
@@ -513,6 +511,73 @@ function getGlobalGameData($appId)
         "rarityAvailable" => $rarityAvailable
     );
 }
+// Request type "get_game_details": current price and sale info for 1 to 50 games at once.
+// Used by the wishlist sale notifications. No player SteamID needed.
+function getGameDetails($appIds)
+{
+    if (!is_array($appIds))
+    {
+        $appIds = array($appIds);
+    }
+
+    $ids = array();
+    foreach ($appIds as $id)
+    {
+        $id = filter_var($id, FILTER_VALIDATE_INT);
+        if ($id !== false && $id > 0)
+        {
+            $ids[$id] = $id; //using the id as the key also removes duplicates
+        }
+    }
+    if (count($ids) == 0 || count($ids) > 50)
+    {
+        return array("returnCode" => '0', "message" => "Send 1 to 50 appIds");
+    }
+
+    // the store API takes many appids at once when we only ask for the price
+    $url = "https://store.steampowered.com/api/appdetails?appids=" . implode(",", $ids) . "&filters=price_overview&cc=us";
+    $data = steamGet($url);
+    if (!$data)
+    {
+        return array("returnCode" => '0', "message" => "Could not load prices");
+    }
+
+    $games = array();
+    foreach ($ids as $id)
+    {
+        $item = $data[$id] ?? null;
+        if (!is_array($item) || empty($item['success']))
+        {
+            $games[] = array("appId" => $id, "found" => false);
+            continue;
+        }
+
+        // free games (and games not sold right now) come back with no price_overview
+        $price = $item['data']['price_overview'] ?? null;
+        if (!is_array($price))
+        {
+            $games[] = array("appId" => $id, "found" => true, "hasPrice" => false, "onSale" => false);
+            continue;
+        }
+
+        $discount = (int)($price['discount_percent'] ?? 0);
+        $games[] = array(
+            "appId"           => $id,
+            "found"           => true,
+            "hasPrice"        => true,
+            "currency"        => $price['currency'] ?? "USD",
+            "initialCents"    => (int)($price['initial'] ?? 0),  // price before the sale, 3999 = $39.99
+            "finalCents"      => (int)($price['final'] ?? 0),    // price right now
+            "discountPercent" => $discount,
+            "onSale"          => $discount > 0,
+            "finalFormatted"  => $price['final_formatted'] ?? ""
+        );
+    }
+
+    return array("returnCode" => '1', "games" => $games);
+}
+
+// RabbitMQ calls this for every message that arrives.
 function requestProcessor($request)
 {
     if (!is_array($request) ||
@@ -550,6 +615,12 @@ function requestProcessor($request)
 
             case "get_steam_reviews":
                 return getSteamReviews($request['appId'] ?? 0);
+
+            case "get_game_details":
+                return getGameDetails($request['appIds'] ?? ($request['appId'] ?? array()));
+
+            case "get_global_game_data":
+                return getGlobalGameData($request['appId'] ?? 0);
 
             case "get_recent_playtime":
                 return getRecentPlaytime($request['user'] ?? "");

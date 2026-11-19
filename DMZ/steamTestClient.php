@@ -39,6 +39,12 @@ else if ($argv[1] == 'reviews')
     $request['type'] = 'get_steam_reviews';
     $request['appId'] = $argv[2];
 }
+else if ($argv[1] == 'price')
+{
+    // php steamTestClient.php price <appId> [more appIds]
+    $request['type'] = 'get_game_details';
+    $request['appIds'] = array_slice($argv, 2);
+}
 else
 {
     echo "Unknown command" . PHP_EOL;
